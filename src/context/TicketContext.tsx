@@ -1,0 +1,282 @@
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import axios from 'axios';
+import { useAuth } from './AuthContext';
+
+// Types
+interface TicketMessage {
+  _id: string;
+  sender: {
+    _id: string;
+    name: string;
+    role: string;
+  };
+  content: string;
+  timestamp: Date;
+}
+
+interface Ticket {
+  _id: string;
+  userId: string | {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  chatId: string;
+  title: string;
+  description: string;
+  category: 'technical' | 'billing' | 'account' | 'feature' | 'bug' | 'other';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'open' | 'in-progress' | 'resolved' | 'closed';
+  assignedTo: string | {
+    _id: string;
+    name: string;
+    email: string;
+  } | null;
+  messages: TicketMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface TicketContextType {
+  tickets: Ticket[];
+  currentTicket: Ticket | null;
+  loading: boolean;
+  error: string | null;
+  getUserTickets: () => Promise<void>;
+  getAllTickets: (page?: number, limit?: number, status?: string) => Promise<void>;
+  getTicketById: (id: string) => Promise<void>;
+  updateTicket: (id: string, data: Partial<Ticket>) => Promise<void>;
+  addTicketMessage: (id: string, content: string) => Promise<void>;
+  classifyTicket: (id: string) => Promise<void>;
+  clearCurrentTicket: () => void;
+  pagination: {
+    page: number;
+    pages: number;
+    total: number;
+  };
+}
+
+// Create context
+const TicketContext = createContext<TicketContextType | undefined>(undefined);
+
+// Provider component
+export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pages: 1,
+    total: 0
+  });
+  const { isAuthenticated, token, isAdmin } = useAuth();
+
+  // Load user tickets when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (isAdmin) {
+        getAllTickets();
+      } else {
+        getUserTickets();
+      }
+    }
+  }, [isAuthenticated, isAdmin]);
+
+  // Get user tickets
+  const getUserTickets = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.get('http://localhost:5000/api/tickets/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.data.success) {
+        setTickets(res.data.data);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Error loading tickets';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get all tickets (admin only)
+  const getAllTickets = async (page = 1, limit = 10, status?: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      let url = `http://localhost:5000/api/tickets?page=${page}&limit=${limit}`;
+      if (status) {
+        url += `&status=${status}`;
+      }
+
+      const res = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.data.success) {
+        setTickets(res.data.data);
+        setPagination({
+          page: res.data.pagination.page,
+          pages: res.data.pagination.pages,
+          total: res.data.total
+        });
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Error loading tickets';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get ticket by ID
+  const getTicketById = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.get(`http://localhost:5000/api/tickets/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Error loading ticket';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update ticket
+  const updateTicket = async (id: string, data: Partial<Ticket>) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.put(`http://localhost:5000/api/tickets/${id}`, data, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+        
+        // Update ticket in the list
+        setTickets(prevTickets =>
+          prevTickets.map(ticket =>
+            ticket._id === id ? res.data.data : ticket
+          )
+        );
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Error updating ticket';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add message to ticket
+  const addTicketMessage = async (id: string, content: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(`http://localhost:5000/api/tickets/${id}/message`, 
+        { content }, 
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Error adding message';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Classify ticket using AI
+  const classifyTicket = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(`http://localhost:5000/api/tickets/${id}/classify`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.data.success) {
+        // Refresh ticket data
+        await getTicketById(id);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Error classifying ticket';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Clear current ticket
+  const clearCurrentTicket = () => {
+    setCurrentTicket(null);
+  };
+
+  return (
+    <TicketContext.Provider
+      value={{
+        tickets,
+        currentTicket,
+        loading,
+        error,
+        getUserTickets,
+        getAllTickets,
+        getTicketById,
+        updateTicket,
+        addTicketMessage,
+        classifyTicket,
+        clearCurrentTicket,
+        pagination
+      }}
+    >
+      {children}
+    </TicketContext.Provider>
+  );
+};
+
+// Custom hook for using ticket context
+export const useTicket = () => {
+  const context = useContext(TicketContext);
+  if (context === undefined) {
+    throw new Error('useTicket must be used within a TicketProvider');
+  }
+  return context;
+};
