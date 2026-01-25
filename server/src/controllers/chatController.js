@@ -1,6 +1,7 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import { analyzeConversation, generateMockResponse } from '../services/aiService.js';
+import { generateChatResponse } from "../services/aiService.js";
 
 // @desc    Start or continue a chat session
 // @route   POST /api/chat/message
@@ -9,20 +10,20 @@ export const sendMessage = async (req, res) => {
   try {
     const { message, chatId } = req.body;
     const userId = req.user.id;
-    
+
     let chat;
-    
+
     // Find existing chat or create a new one
     if (chatId) {
       chat = await Chat.findById(chatId);
-      
+
       if (!chat) {
         return res.status(404).json({
           success: false,
           message: 'Chat not found'
         });
       }
-      
+
       // Verify chat belongs to user
       if (chat.userId.toString() !== userId) {
         return res.status(403).json({
@@ -42,43 +43,47 @@ export const sendMessage = async (req, res) => {
         ]
       });
     }
-    
+
     // Add user message to chat
     chat.messages.push({
       role: 'user',
       content: message,
       timestamp: Date.now()
     });
-    
+
     // Get chat history for context
     const chatHistory = chat.messages.map(msg => ({
       role: msg.role,
       content: msg.content
     }));
-    
+
     // Generate mock AI response (instead of calling OpenAI)
-    console.log('🤖 Generating mock AI response...');
-    const aiResponse = generateMockResponse(message, chatHistory);
-    
-    // Add AI response to chat
-    chat.messages.push({
-      role: 'assistant',
-      content: aiResponse,
-      timestamp: Date.now()
-    });
-    
-    // Save chat with both messages at once
-    await chat.save();
-    
+    // let aiResponse = generateMockResponse(message, chatHistory);
+    let aiResponse = "";
+
+    try {
+      const reply = await generateChatResponse([
+        { role: "system", content: "You are a helpful support assistant." },
+        { role: "user", content: req.body.message },
+      ]);
+
+      console.log('🤖 AI Response:', reply);
+      aiResponse = reply;
+    } catch (error) {
+      console.log('❗ Error generating AI response:', error.message);
+      console.error(error);
+      aiResponse = "I'm sorry, but I'm currently unable to process your request. Please try again later.";
+    }
+
     // Check if the response indicates escalation is needed
     const needsEscalation = await analyzeConversation(chatHistory, aiResponse);
-    
     if (needsEscalation) {
+      aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
       console.log('🎫 Escalating to ticket...');
-      
+
       // Mark chat for escalation
       chat.escalatedToTicket = true;
-      
+
       // Create a ticket from the chat
       const ticket = await Ticket.create({
         userId,
@@ -88,30 +93,28 @@ export const sendMessage = async (req, res) => {
         category: 'other', // Will be classified by AI later
         priority: 'medium'
       });
-      
+
       // Link ticket to chat
       chat.ticketId = ticket._id;
-      
-      // Save the chat with ticket info
-      await chat.save();
-      
-      return res.status(200).json({
+    }
+
+    // Add AI response to chat
+    chat.messages.push({
+      role: 'assistant',
+      content: aiResponse,
+      timestamp: Date.now()
+    });
+
+    await chat.save();
+
+    return res.status(200).json({
         success: true,
         data: {
           chat,
-          escalated: true,
-          ticketId: ticket._id
+          escalated: needsEscalation,
+          ticketId: needsEscalation ? chat.ticketId : null
         }
       });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        chat,
-        escalated: false
-      }
-    });
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({
@@ -128,14 +131,14 @@ export const sendMessage = async (req, res) => {
 export const getChatById = async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
-    
+
     if (!chat) {
       return res.status(404).json({
         success: false,
         message: 'Chat not found'
       });
     }
-    
+
     // Verify chat belongs to user
     if (chat.userId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
@@ -143,7 +146,7 @@ export const getChatById = async (req, res) => {
         message: 'Not authorized to access this chat'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: chat
@@ -164,7 +167,7 @@ export const getUserChats = async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.user.id })
       .sort({ updatedAt: -1 });
-    
+
     res.status(200).json({
       success: true,
       count: chats.length,
