@@ -43,7 +43,7 @@ const ChatSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt field on save
-ChatSchema.pre('save', function(next) {
+ChatSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });

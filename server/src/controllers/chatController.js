@@ -101,13 +101,13 @@ export const sendMessage = async (req, res) => {
     await chat.save();
 
     return res.status(200).json({
-        success: true,
-        data: {
-          chat,
-          escalated: analyzeResult === true,
-          ticketId: analyzeResult === true ? chat.ticketId : null
-        }
-      });
+      success: true,
+      data: {
+        chat,
+        escalated: analyzeResult === true,
+        ticketId: analyzeResult === true ? chat.ticketId : null
+      }
+    });
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({
@@ -171,6 +171,27 @@ export const getUserChats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error'
+    });
+  }
+};
+
+export const deleteAllChats = async (req, res) => {
+  try {
+    const result = await Chat.deleteMany({ userId: req.user.id });
+
+    console.log(`Deleted ${result.deletedCount} chats for user ${req.user.id}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'All chats deleted successfully',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Delete all chats error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
     });
   }
 };
