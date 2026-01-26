@@ -39,7 +39,21 @@ export async function analyzeConversation(chatHistory, latestAIResponse) {
       `;
 
     const aiDecision = await generateChatResponse([
-      { role: "system", content: "You are an AI that decides if a conversation requires human escalation." },
+      { role: "system", content: `
+        You are an AI that decides if a conversation requires human escalation.
+
+        Escalation is REQUIRED if the user:
+        - asks for a real person, human agent, or technical support staff
+        - asks for live support
+        - asks for help beyond AI capability
+        - reports bugs, errors, billing, payment, or account issues
+        - explicitly requests escalation or human assistance
+
+        Return ONLY:
+        YES
+        or
+        NO`
+    },
       { role: "user", content: prompt }
     ]);
 
