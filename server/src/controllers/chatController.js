@@ -1,7 +1,6 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import { analyzeConversation, generateMockResponse } from '../services/aiService.js';
-import { generateChatResponse } from "../services/aiService.js";
 
 // @desc    Start or continue a chat session
 // @route   POST /api/chat/message
@@ -51,33 +50,25 @@ export const sendMessage = async (req, res) => {
       timestamp: Date.now()
     });
 
-    // Get chat history for context
-    const chatHistory = chat.messages.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
+    // Build chat history:
+    // - last 5 messages
+    // - each content trimmed to 1000 chars
+    const chatHistory = chat.messages
+      .slice(-5)
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content.length > 1000
+          ? msg.content.slice(0, 1000)
+          : msg.content
+      }));
 
     // Generate mock AI response (instead of calling OpenAI)
     // let aiResponse = generateMockResponse(message, chatHistory);
     let aiResponse = "";
 
-    try {
-      const reply = await generateChatResponse([
-        { role: "system", content: "You are a helpful support assistant." },
-        { role: "user", content: req.body.message },
-      ]);
-
-      console.log('🤖 AI Response:', reply);
-      aiResponse = reply;
-    } catch (error) {
-      console.log('❗ Error generating AI response:', error.message);
-      console.error(error);
-      aiResponse = "I'm sorry, but I'm currently unable to process your request. Please try again later.";
-    }
-
     // Check if the response indicates escalation is needed
-    const needsEscalation = await analyzeConversation(chatHistory, aiResponse);
-    if (needsEscalation) {
+    const analyzeResult = await analyzeConversation(chatHistory, message);
+    if (analyzeResult === true) {
       aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
       console.log('🎫 Escalating to ticket...');
 
@@ -96,6 +87,8 @@ export const sendMessage = async (req, res) => {
 
       // Link ticket to chat
       chat.ticketId = ticket._id;
+    } else {
+      aiResponse = analyzeResult; // use the AI's response if no escalation needed
     }
 
     // Add AI response to chat
@@ -111,8 +104,8 @@ export const sendMessage = async (req, res) => {
         success: true,
         data: {
           chat,
-          escalated: needsEscalation,
-          ticketId: needsEscalation ? chat.ticketId : null
+          escalated: analyzeResult === true,
+          ticketId: analyzeResult === true ? chat.ticketId : null
         }
       });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { a } from "framer-motion/client";
 import openai from "../config/openaiClient.js";
 
 // Mock AI Service for testing without OpenAI API key
@@ -21,22 +22,18 @@ const escalationTriggers = [
 
 /**
  * Analyze conversation for escalation using AI
- * @param {Array} chatHistory - Array of chat messages [{role, content}]
- * @param {String} latestAIResponse - The AI's last response
- * @returns {Boolean} - Whether escalation is needed
+ * @param {Array} chatHistory - Full conversation history
+ * @param {String} latestMessage - Latest AI-generated message
+ * @returns {Boolean|String} - true if escalation needed, else AI response
  */
-export async function analyzeConversation(chatHistory, latestAIResponse) {
+export async function analyzeConversation(chatHistory, latestMessage = "") {
   try {
     const prompt = `
       You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
-      Return ONLY "YES" if escalation is needed, or "NO" if not.
+      Return ONLY "YES" if escalation is needed, if not return a response.
 
       Conversation:
-      ${chatHistory.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n")}
-
-      AI's last response:
-      ${latestAIResponse}
-      `;
+      ${chatHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}`;
 
     const aiDecision = await generateChatResponse([
       { role: "system", content: `
@@ -52,7 +49,7 @@ export async function analyzeConversation(chatHistory, latestAIResponse) {
         Return ONLY:
         YES
         or
-        NO`
+        response to the user if escalation is NOT needed.`
     },
       { role: "user", content: prompt }
     ]);
@@ -60,11 +57,19 @@ export async function analyzeConversation(chatHistory, latestAIResponse) {
     console.log("AI Escalation Decision:", aiDecision);
 
     // Normalize response and return boolean
-    return aiDecision.trim().toUpperCase() == "YES";
+    if (aiDecision.trim().toUpperCase() === "YES") {
+      return true;
+    } else {
+      if (getRuleBasedResponse(latestMessage)) {
+        return getRuleBasedResponse(latestMessage);
+      }
+
+      return aiDecision; // return the AI's response if no escalation needed
+    }
 
   } catch (error) {
     console.error("Error in AI conversation analysis:", error);
-    return false;
+    return "I'm sorry, but I'm currently unable to process your request. Please try again later.";
   }
 }
 
@@ -164,6 +169,53 @@ export const generateMockResponse = (userMessage, chatHistory = []) => {
 
   return responses[Math.floor(Math.random() * responses.length)];
 };
+
+/**
+ * Check if message matches predefined responses
+ * @param {String} message
+ * @returns {String|null} - Response or null if no match
+ */
+export function getRuleBasedResponse(message) {
+  if (!message) return null;
+
+  const messageLower = message.toLowerCase();
+
+  // Greeting responses
+  if (
+    messageLower.includes("hello") ||
+    messageLower.includes("hi") ||
+    messageLower.includes("hey")
+  ) {
+    return "Hello! I'm your AI support assistant. I'm here to help answer your questions and provide support. What can I assist you with today?";
+  }
+
+  // Help responses
+  if (
+    messageLower.includes("help") ||
+    messageLower.includes("support")
+  ) {
+    return "I'm here to help! I can assist with general questions about our services, account information, and basic troubleshooting. If you have a specific question, feel free to ask and I'll do my best to help you.";
+  }
+
+  // Product / service questions
+  if (
+    messageLower.includes("product") ||
+    messageLower.includes("service") ||
+    messageLower.includes("feature")
+  ) {
+    return "I'd be happy to help you learn more about our products and services. Could you tell me specifically what you'd like to know? I can provide information about features, pricing, and general usage.";
+  }
+
+  // Account questions (non-problem)
+  if (
+    messageLower.includes("account") &&
+    !messageLower.includes("problem")
+  ) {
+    return "For account-related questions, I can help with general information. If you need to make changes to your account or access specific account details, I may need to create a support ticket for security reasons.";
+  }
+
+  return null; // fallback to AI
+}
 
 /**
  * Generate AI chat response using OpenAI
