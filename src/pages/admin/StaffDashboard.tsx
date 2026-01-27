@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Users, UserPlus, BarChart3, Clock, CheckCircle, AlertTriangle, Star, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, BarChart3, Clock, CheckCircle, AlertTriangle, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import axios from 'axios';
+import Modal from '../../components/modal/staff/Modal';
 
 interface StaffMember {
   _id: string;
@@ -24,11 +26,30 @@ interface StaffMember {
 }
 
 const StaffDashboard: React.FC = () => {
-  const { user } = useAuth();
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('month');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editStaff, setEditStaff] = useState<{
+    _id: string;
+    name: string;
+    email: string;
+    isActive: boolean;
+    password?: string;
+    confirmPassword?: string;
+  } | null>(null);
+
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const { token, user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchStaffMembers();
@@ -38,23 +59,17 @@ const StaffDashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('http://localhost:5000/api/staff', {
+
+      const response = await axios.get('http://localhost:5000/api/staff', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          Authorization: `Bearer ${token}`
+        },
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch staff members');
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setStaffMembers(data.data);
+
+      if (response.data.success) {
+        setStaffMembers(response.data.data);
       } else {
-        throw new Error(data.message || 'Failed to fetch staff members');
+        throw new Error(response.data.message || 'Failed to fetch staff members');
       }
     } catch (error: any) {
       console.error('Error fetching staff members:', error);
@@ -87,12 +102,12 @@ const StaffDashboard: React.FC = () => {
     return [...staffMembers]
       .filter(staff => staff.isActive)
       .sort((a, b) => {
-        const scoreA = (a.stats.customerRating * 0.4) + 
-                      ((a.stats.resolvedTickets / Math.max(a.stats.totalTickets, 1)) * 0.3) +
-                      ((10 - Math.min(a.stats.avgResolutionTime, 10)) * 0.3);
-        const scoreB = (b.stats.customerRating * 0.4) + 
-                      ((b.stats.resolvedTickets / Math.max(b.stats.totalTickets, 1)) * 0.3) +
-                      ((10 - Math.min(b.stats.avgResolutionTime, 10)) * 0.3);
+        const scoreA = (a.stats.customerRating * 0.4) +
+          ((a.stats.resolvedTickets / Math.max(a.stats.totalTickets, 1)) * 0.3) +
+          ((10 - Math.min(a.stats.avgResolutionTime, 10)) * 0.3);
+        const scoreB = (b.stats.customerRating * 0.4) +
+          ((b.stats.resolvedTickets / Math.max(b.stats.totalTickets, 1)) * 0.3) +
+          ((10 - Math.min(b.stats.avgResolutionTime, 10)) * 0.3);
         return scoreB - scoreA;
       })
       .slice(0, 3);
@@ -280,11 +295,10 @@ const StaffDashboard: React.FC = () => {
               <button
                 key={period}
                 onClick={() => setSelectedPeriod(period)}
-                className={`px-4 py-2 text-sm rounded-md ${
-                  selectedPeriod === period
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 text-sm rounded-md ${selectedPeriod === period
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 {period === 'week' ? 'This Week' : period === 'month' ? 'This Month' : 'All Time'}
               </button>
@@ -346,21 +360,20 @@ const StaffDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      staff.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${staff.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                      }`}>
                       {staff.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {selectedPeriod === 'week' 
+                      {selectedPeriod === 'week'
                         ? staff.stats.thisWeekResolved
                         : selectedPeriod === 'month'
-                        ? staff.stats.thisMonthResolved
-                        : staff.stats.resolvedTickets
+                          ? staff.stats.thisMonthResolved
+                          : staff.stats.resolvedTickets
                       }
                     </div>
                     <div className="text-xs text-gray-500">
@@ -369,15 +382,14 @@ const StaffDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{staff.stats.avgResolutionTime}h</div>
-                    <div className={`text-xs ${
-                      staff.stats.avgResolutionTime <= 4 
-                        ? 'text-green-600' 
-                        : staff.stats.avgResolutionTime <= 6 
-                        ? 'text-yellow-600' 
+                    <div className={`text-xs ${staff.stats.avgResolutionTime <= 4
+                      ? 'text-green-600'
+                      : staff.stats.avgResolutionTime <= 6
+                        ? 'text-yellow-600'
                         : 'text-red-600'
-                    }`}>
-                      {staff.stats.avgResolutionTime <= 4 ? 'Excellent' : 
-                       staff.stats.avgResolutionTime <= 6 ? 'Good' : 'Needs Improvement'}
+                      }`}>
+                      {staff.stats.avgResolutionTime <= 4 ? 'Excellent' :
+                        staff.stats.avgResolutionTime <= 6 ? 'Good' : 'Needs Improvement'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -387,24 +399,36 @@ const StaffDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      staff.stats.activeTickets <= 5 
-                        ? 'bg-green-100 text-green-800'
-                        : staff.stats.activeTickets <= 10
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${staff.stats.activeTickets <= 5
+                      ? 'bg-green-100 text-green-800'
+                      : staff.stats.activeTickets <= 10
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-red-100 text-red-800'
-                    }`}>
+                      }`}>
                       {staff.stats.activeTickets}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
+                      <button className="text-blue-600 hover:text-blue-900"
+                        onClick={() => {
+                          setEditStaff({
+                            _id: staff._id,
+                            name: staff.name,
+                            email: staff.email,
+                            isActive: staff.isActive,
+                          });
+                          setShowEditModal(true);
+                        }}>
                         Edit
                       </button>
-                      <button 
-                        className="text-red-600 hover:text-red-900"
-                        onClick={() => handleDeleteStaff(staff._id)}
+                      <button
+                        className={`text-red-600 hover:text-red-900 ${staff._id === currentUser?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={staff._id == currentUser?.id}
+                        onClick={() => {
+                          setSelectedStaffId(staff._id);
+                          setShowDeleteModal(true);
+                        }}
                       >
                         Delete
                       </button>
@@ -426,28 +450,290 @@ const StaffDashboard: React.FC = () => {
           <BarChart3 className="h-5 w-5 mr-2" />
           Refresh Data
         </button>
-        <button 
-          onClick={handleAddStaff}
+        <button
+          onClick={() => {
+            setNewStaff({
+              name: '',
+              email: '',
+              password: '',
+              confirmPassword: '',
+            });
+            setShowAddModal(true);
+          }}
           className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <UserPlus className="h-5 w-5 mr-2" />
           Add New Staff Member
         </button>
       </div>
+
+      {/* Delete Modal */}
+      <Modal
+        open={showDeleteModal}
+        title="Delete Staff Member"
+        onClose={() => setShowDeleteModal(false)}
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Are you sure you want to delete this staff member? This action cannot be undone.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowDeleteModal(false)}
+            className="px-4 py-2 bg-gray-200 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (!selectedStaffId) return;
+              handleDeleteStaff(selectedStaffId);
+              setShowDeleteModal(false);
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
+
+      {/* Add Staff Modal */}
+      <Modal
+        open={showAddModal}
+        title="Add Staff Member"
+        onClose={() => setShowAddModal(false)}
+      >
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Full Name"
+            className="w-full border px-3 py-2 rounded"
+            value={newStaff.name}
+            onChange={e => setNewStaff({ ...newStaff, name: e.target.value })}
+          />
+
+          <input
+            type="email"
+            placeholder="Email Address"
+            className="w-full border px-3 py-2 rounded"
+            value={newStaff.email}
+            onChange={e => setNewStaff({ ...newStaff, email: e.target.value })}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full border px-3 py-2 rounded"
+            value={newStaff.password}
+            onChange={e =>
+              setNewStaff({ ...newStaff, password: e.target.value })
+            }
+          />
+
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            className="w-full border px-3 py-2 rounded"
+            value={newStaff.confirmPassword}
+            onChange={e =>
+              setNewStaff({ ...newStaff, confirmPassword: e.target.value })
+            }
+          />
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 bg-gray-200 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddStaff}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              Add Staff
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal
+        open={showEditModal}
+        title="Edit Staff Member"
+        onClose={() => setShowEditModal(false)}
+      >
+        {editStaff && (
+          <div className="space-y-4">
+            <input
+              type="text"
+              className="w-full border px-3 py-2 rounded"
+              value={editStaff.name}
+              onChange={e =>
+                setEditStaff({ ...editStaff, name: e.target.value })
+              }
+            />
+
+            <input
+              type="email"
+              className="w-full border px-3 py-2 rounded"
+              value={editStaff.email}
+              onChange={e =>
+                setEditStaff({ ...editStaff, email: e.target.value })
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="New Password (optional)"
+              className="w-full border px-3 py-2 rounded"
+              value={editStaff.password || ''}
+              onChange={e =>
+                setEditStaff({ ...editStaff, password: e.target.value })
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Confirm New Password"
+              className="w-full border px-3 py-2 rounded"
+              value={editStaff.confirmPassword || ''}
+              onChange={e =>
+                setEditStaff({ ...editStaff, confirmPassword: e.target.value })
+              }
+            />
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={editStaff.isActive}
+                onChange={e =>
+                  setEditStaff({ ...editStaff, isActive: e.target.checked })
+                }
+              />
+              Active
+            </label>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStaff}
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 
   function handleDeleteStaff(staffId: string) {
-    if (window.confirm('Are you sure you want to delete this staff member?')) {
-      // TODO: Implement delete functionality
-      toast.info('Delete functionality will be implemented');
-    }
+    axios.delete(`http://localhost:5000/api/staff/${staffId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+    })
+      .then(res => {
+        if (res.data.success) {
+          toast.success('Staff member deleted successfully');
+          fetchStaffMembers();
+        } else {
+          toast.error(res.data.message || 'Failed to delete staff member');
+        }
+      })
+      .catch(err => {
+        console.error('Error deleting staff member:', err);
+        toast.error('Error deleting staff member');
+      });
   }
 
   function handleAddStaff() {
-    // TODO: Implement add staff functionality
-    toast.info('Add staff functionality will be implemented');
+    if (newStaff.password !== newStaff.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    axios.post('http://localhost:5000/api/staff',
+      {
+        name: newStaff.name,
+        email: newStaff.email,
+        password: newStaff.password,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+      })
+      .then(res => {
+        if (res.data.success) {
+          toast.success('Staff member added successfully');
+          setShowAddModal(false);
+          setNewStaff({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+          });
+          fetchStaffMembers();
+        } else {
+          toast.error(res.data.message || 'Failed to add staff member');
+        }
+      })
+      .catch(err => {
+        console.error('Error adding staff member:', err);
+        toast.error(err?.response?.data?.message || 'Error adding staff member');
+      });
   }
+
+  function handleUpdateStaff() {
+    if (!editStaff) return;
+
+    if (
+      editStaff.password &&
+      editStaff.password !== editStaff.confirmPassword
+    ) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    axios.put(
+      `http://localhost:5000/api/staff/${editStaff._id}`,
+      {
+        name: editStaff.name,
+        email: editStaff.email,
+        isActive: editStaff.isActive,
+        ...(editStaff.password && { password: editStaff.password }),
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+      .then(res => {
+        if (res.data.success) {
+          toast.success('Staff member updated successfully');
+          setShowEditModal(false);
+          setEditStaff(null);
+          fetchStaffMembers();
+        } else {
+          toast.error(res.data.message || 'Failed to update staff member');
+        }
+      })
+      .catch(err => {
+        console.error('Error updating staff member:', err);
+        toast.error(err?.response?.data?.message || 'Error updating staff member');
+      });
+  }
+
 };
 
 export default StaffDashboard;

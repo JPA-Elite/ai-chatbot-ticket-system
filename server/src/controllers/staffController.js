@@ -16,31 +16,31 @@ export const getAllStaff = async (req, res) => {
       staffMembers.map(async (staff) => {
         // Get tickets assigned to this staff member
         const tickets = await Ticket.find({ assignedTo: staff._id });
-        
+
         const totalTickets = tickets.length;
         const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
         const activeTickets = tickets.filter(t => t.status === 'open' || t.status === 'in-progress').length;
-        
+
         // Calculate average resolution time (mock calculation)
-        const avgResolutionTime = totalTickets > 0 ? 
+        const avgResolutionTime = totalTickets > 0 ?
           Math.random() * 8 + 2 : 0; // Random between 2-10 hours for demo
-        
+
         // Calculate customer rating (mock)
-        const customerRating = totalTickets > 0 ? 
+        const customerRating = totalTickets > 0 ?
           Math.random() * 1.5 + 3.5 : 0; // Random between 3.5-5.0 for demo
-        
+
         // Calculate weekly and monthly resolved tickets
         const now = new Date();
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        
-        const thisWeekResolved = tickets.filter(t => 
-          (t.status === 'resolved' || t.status === 'closed') && 
+
+        const thisWeekResolved = tickets.filter(t =>
+          (t.status === 'resolved' || t.status === 'closed') &&
           new Date(t.updatedAt) >= weekAgo
         ).length;
-        
-        const thisMonthResolved = tickets.filter(t => 
-          (t.status === 'resolved' || t.status === 'closed') && 
+
+        const thisMonthResolved = tickets.filter(t =>
+          (t.status === 'resolved' || t.status === 'closed') &&
           new Date(t.updatedAt) >= monthAgo
         ).length;
 
@@ -81,7 +81,7 @@ export const getAllStaff = async (req, res) => {
 export const getStaffById = async (req, res) => {
   try {
     const staff = await User.findById(req.params.id).select('-password');
-    
+
     if (!staff) {
       return res.status(404).json({
         success: false,
@@ -137,14 +137,25 @@ export const getStaffById = async (req, res) => {
 export const updateStaff = async (req, res) => {
   try {
     const { name, email, role, isActive, department } = req.body;
-    
+
     const staff = await User.findById(req.params.id);
-    
+
     if (!staff) {
       return res.status(404).json({
         success: false,
         message: 'Staff member not found'
       });
+    }
+
+    // check for email uniqueness
+    if (email && email !== staff.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already in use by another user'
+        });
+      }
     }
 
     // Update fields
@@ -180,9 +191,9 @@ export const createStaff = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already registered' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
       });
     }
 
@@ -222,7 +233,7 @@ export const createStaff = async (req, res) => {
 export const deleteStaff = async (req, res) => {
   try {
     const staff = await User.findById(req.params.id);
-    
+
     if (!staff) {
       return res.status(404).json({
         success: false,
@@ -268,34 +279,34 @@ export const deleteStaff = async (req, res) => {
 export const getMyStats = async (req, res) => {
   try {
     const staffId = req.user.id;
-    
+
     // Get tickets assigned to this staff member
     const tickets = await Ticket.find({ assignedTo: staffId });
-    
+
     const totalTickets = tickets.length;
     const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
     const activeTickets = tickets.filter(t => t.status === 'open' || t.status === 'in-progress').length;
-    
+
     // Calculate average resolution time (mock calculation for now)
-    const avgResolutionTime = totalTickets > 0 ? 
+    const avgResolutionTime = totalTickets > 0 ?
       Math.random() * 6 + 2 : 0; // Random between 2-8 hours for demo
-    
+
     // Calculate customer rating (mock)
-    const customerRating = totalTickets > 0 ? 
+    const customerRating = totalTickets > 0 ?
       Math.random() * 1.5 + 3.5 : 0; // Random between 3.5-5.0 for demo
-    
+
     // Calculate weekly and monthly resolved tickets
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    const thisWeekResolved = tickets.filter(t => 
-      (t.status === 'resolved' || t.status === 'closed') && 
+
+    const thisWeekResolved = tickets.filter(t =>
+      (t.status === 'resolved' || t.status === 'closed') &&
       new Date(t.updatedAt) >= weekAgo
     ).length;
-    
-    const thisMonthResolved = tickets.filter(t => 
-      (t.status === 'resolved' || t.status === 'closed') && 
+
+    const thisMonthResolved = tickets.filter(t =>
+      (t.status === 'resolved' || t.status === 'closed') &&
       new Date(t.updatedAt) >= monthAgo
     ).length;
 
