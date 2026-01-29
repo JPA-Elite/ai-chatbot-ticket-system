@@ -105,7 +105,7 @@ const InquiryDashboard: React.FC = () => {
         >
           Inquiry Management
         </motion.h1>
-        <p className="text-gray-600">Train AI model by creating multiple inquiries</p>
+        <p className="text-gray-600">Train AI (Artificial Intelligence) model by creating custom multiple inquiries</p>
       </div>
       {/* Add Inquiry Button */}
       <div className="mb-6 flex justify-end">
@@ -139,7 +139,10 @@ const InquiryDashboard: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -160,7 +163,7 @@ const InquiryDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-xs text-gray-400 truncate max-w-lg">
+                      <div className="text-xs text-gray-400 truncate max-w-xs">
                         {inquiry.promptResponse}
                       </div>
                     </div>
@@ -173,7 +176,10 @@ const InquiryDashboard: React.FC = () => {
                       {inquiry.isEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(inquiry.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex justify-end space-x-2">
                       <button className="text-blue-600 hover:text-blue-900"
                         onClick={() => {
