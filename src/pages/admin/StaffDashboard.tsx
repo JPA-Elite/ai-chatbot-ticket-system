@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import Modal from '../../components/modal/staff/Modal';
+import Modal from '../../components/modal/ui/Modal';
 
 interface StaffMember {
   _id: string;
@@ -472,6 +472,7 @@ const StaffDashboard: React.FC = () => {
         open={showDeleteModal}
         title="Delete Staff Member"
         onClose={() => setShowDeleteModal(false)}
+        size='sm'
       >
         <p className="text-sm text-gray-600 mb-4">
           Are you sure you want to delete this staff member? This action cannot be undone.
@@ -502,6 +503,7 @@ const StaffDashboard: React.FC = () => {
         open={showAddModal}
         title="Add Staff Member"
         onClose={() => setShowAddModal(false)}
+        size='sm'
       >
         <div className="space-y-4">
           <input
@@ -562,6 +564,7 @@ const StaffDashboard: React.FC = () => {
         open={showEditModal}
         title="Edit Staff Member"
         onClose={() => setShowEditModal(false)}
+        size='sm'
       >
         {editStaff && (
           <div className="space-y-4">

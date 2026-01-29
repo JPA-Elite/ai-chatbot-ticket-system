@@ -24,6 +24,7 @@ import StaffStats from './pages/StaffStats';
 import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
 import { TicketProvider } from './context/TicketContext';
+import InquiryDashboard from './pages/admin/InquiryDashboard';
 
 function App() {
   return (
@@ -76,6 +77,11 @@ function App() {
                   <Route path="/admin/staff" element={
                     <AdminRoute>
                       <StaffDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/inquiry" element={
+                    <AdminRoute>
+                      <InquiryDashboard />
                     </AdminRoute>
                   } />
                   <Route path="/admin/tickets/:id" element={
