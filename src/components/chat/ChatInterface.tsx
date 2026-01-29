@@ -30,7 +30,11 @@ interface DeleteModalProps {
   onConfirm: () => Promise<void>;
 }
 
-const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm }) => {
+const DeleteModal: React.FC<DeleteModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+}) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -48,7 +52,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm })
       }, 1500);
     } catch (error) {
       setIsDeleting(false);
-      console.error('Error deleting chats:', error);
+      console.error("Error deleting chats:", error);
     }
   };
 
@@ -64,7 +68,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm })
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ type: 'spring', duration: 0.3 }}
+        transition={{ type: "spring", duration: 0.3 }}
         className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -77,14 +81,26 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm })
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', duration: 0.5 }}
+              transition={{ type: "spring", duration: 0.5 }}
               className="bg-green-100 p-4 rounded-full inline-block mb-4"
             >
-              <svg className="h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="h-12 w-12 text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </motion.div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Successfully Deleted!</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Successfully Deleted!
+            </h3>
             <p className="text-gray-600">All chats have been removed</p>
           </motion.div>
         ) : (
@@ -93,13 +109,17 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm })
               <div className="bg-red-100 p-3 rounded-full">
                 <X className="h-6 w-6 text-red-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900">Delete All Chats</h3>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Delete All Chats
+              </h3>
             </div>
-            
+
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete all chats? This action cannot be undone and all your conversation history will be permanently removed.
+              Are you sure you want to delete all chats? This action cannot be
+              undone and all your conversation history will be permanently
+              removed.
             </p>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={onClose}
@@ -117,13 +137,17 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, onClose, onConfirm })
                   <>
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                     />
                     Deleting...
                   </>
                 ) : (
-                  'Delete All'
+                  "Delete All"
                 )}
               </button>
             </div>
@@ -153,6 +177,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showNoDataModal, setShowNoDataModal] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -292,8 +317,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         <div className="p-4 border-t border-gray-700">
           <button
-            onClick={() => setShowDeleteModal(true)}
-            className="w-full bg-red-600 hover:bg-red-700 text-white rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors text-sm"
+            onClick={() => {
+              if (chatHistory.length === 0) {
+                setShowNoDataModal(true);
+              } else {
+                setShowDeleteModal(true);
+              }
+            }}
+            className="w-full bg-gray-600 hover:bg-gray-700 text-white rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors text-sm"
           >
             <X className="h-4 w-4" />
             Delete All Chats
@@ -416,9 +447,51 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         onConfirm={async () => {
           await deleteAllChats();
           clearCurrentChat();
-          setSearchQuery('');
+          setSearchQuery("");
         }}
       />
+
+      {showNoDataModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowNoDataModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.3 }}
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-yellow-100 p-3 rounded-full">
+                <MessageSquare className="h-6 w-6 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                No Chat History
+              </h3>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              There are no chats to delete. Start a new conversation to begin
+              chatting!
+            </p>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowNoDataModal(false)}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Got it
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 };

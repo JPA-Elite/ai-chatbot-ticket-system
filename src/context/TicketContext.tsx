@@ -1,6 +1,12 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  ReactNode,
+} from "react";
+import axios from "axios";
+import { useAuth } from "./AuthContext";
 
 // Types
 interface TicketMessage {
@@ -16,22 +22,37 @@ interface TicketMessage {
 
 interface Ticket {
   _id: string;
-  userId: string | {
-    _id: string;
-    name: string;
-    email: string;
-  };
+  userId:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+      };
   chatId: string;
   title: string;
   description: string;
-  category: 'technical' | 'billing' | 'account' | 'feature' | 'bug' | 'other';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  assignedTo: string | {
-    _id: string;
-    name: string;
-    email: string;
-  } | null;
+  category: "technical" | "billing" | "account" | "feature" | "bug" | "other";
+  priority: "low" | "medium" | "high" | "urgent";
+  status: "pending" | "accepted" | "in-progress" | "resolved" | "closed";
+  assignedTo:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+        department?: string;
+      }
+    | null;
+  acceptedBy:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+      }
+    | null;
+  acceptedAt: Date | null;
   messages: TicketMessage[];
   createdAt: Date;
   updatedAt: Date;
@@ -43,11 +64,17 @@ interface TicketContextType {
   loading: boolean;
   error: string | null;
   getUserTickets: () => Promise<void>;
-  getAllTickets: (page?: number, limit?: number, status?: string) => Promise<void>;
+  getAllTickets: (
+    page?: number,
+    limit?: number,
+    status?: string,
+  ) => Promise<void>;
   getTicketById: (id: string) => Promise<void>;
   updateTicket: (id: string, data: Partial<Ticket>) => Promise<void>;
   addTicketMessage: (id: string, content: string) => Promise<void>;
   classifyTicket: (id: string) => Promise<void>;
+  acceptTicket: (id: string) => Promise<void>;
+  endConversation: (id: string) => Promise<void>;
   clearCurrentTicket: () => void;
   pagination: {
     page: number;
@@ -60,7 +87,9 @@ interface TicketContextType {
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
 
 // Provider component
-export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const TicketProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -68,7 +97,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
-    total: 0
+    total: 0,
   });
   const { isAuthenticated, token, isAdmin } = useAuth();
 
@@ -89,17 +118,18 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(true);
       setError(null);
 
-      const res = await axios.get('http://localhost:5000/api/tickets/user', {
+      const res = await axios.get("http://localhost:5000/api/tickets/user", {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (res.data.success) {
         setTickets(res.data.data);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error loading tickets';
+      const errorMessage =
+        err.response?.data?.message || "Error loading tickets";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -119,8 +149,8 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       const res = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (res.data.success) {
@@ -128,11 +158,12 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setPagination({
           page: res.data.pagination.page,
           pages: res.data.pagination.pages,
-          total: res.data.total
+          total: res.data.total,
         });
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error loading tickets';
+      const errorMessage =
+        err.response?.data?.message || "Error loading tickets";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -147,15 +178,16 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       const res = await axios.get(`http://localhost:5000/api/tickets/${id}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (res.data.success) {
         setCurrentTicket(res.data.data);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error loading ticket';
+      const errorMessage =
+        err.response?.data?.message || "Error loading ticket";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -168,24 +200,29 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(true);
       setError(null);
 
-      const res = await axios.put(`http://localhost:5000/api/tickets/${id}`, data, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const res = await axios.put(
+        `http://localhost:5000/api/tickets/${id}`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
       if (res.data.success) {
         setCurrentTicket(res.data.data);
-        
+
         // Update ticket in the list
-        setTickets(prevTickets =>
-          prevTickets.map(ticket =>
-            ticket._id === id ? res.data.data : ticket
-          )
+        setTickets((prevTickets) =>
+          prevTickets.map((ticket) =>
+            ticket._id === id ? res.data.data : ticket,
+          ),
         );
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error updating ticket';
+      const errorMessage =
+        err.response?.data?.message || "Error updating ticket";
       setError(errorMessage);
       throw err;
     } finally {
@@ -199,20 +236,22 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(true);
       setError(null);
 
-      const res = await axios.post(`http://localhost:5000/api/tickets/${id}/message`, 
-        { content }, 
+      const res = await axios.post(
+        `http://localhost:5000/api/tickets/${id}/message`,
+        { content },
         {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
 
       if (res.data.success) {
         setCurrentTicket(res.data.data);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error adding message';
+      const errorMessage =
+        err.response?.data?.message || "Error adding message";
       setError(errorMessage);
       throw err;
     } finally {
@@ -226,18 +265,23 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(true);
       setError(null);
 
-      const res = await axios.post(`http://localhost:5000/api/tickets/${id}/classify`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const res = await axios.post(
+        `http://localhost:5000/api/tickets/${id}/classify`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
       if (res.data.success) {
         // Refresh ticket data
         await getTicketById(id);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Error classifying ticket';
+      const errorMessage =
+        err.response?.data?.message || "Error classifying ticket";
       setError(errorMessage);
       throw err;
     } finally {
@@ -246,6 +290,64 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   // Clear current ticket
+  const acceptTicket = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(
+        `http://localhost:5000/api/tickets/${id}/accept`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+        await getAllTickets();
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Error accepting ticket";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const endConversation = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(
+        `http://localhost:5000/api/tickets/${id}/end`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+        await getAllTickets();
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Error ending conversation";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearCurrentTicket = () => {
     setCurrentTicket(null);
   };
@@ -263,8 +365,10 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         updateTicket,
         addTicketMessage,
         classifyTicket,
+        acceptTicket,
+        endConversation,
         clearCurrentTicket,
-        pagination
+        pagination,
       }}
     >
       {children}
@@ -276,7 +380,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 export const useTicket = () => {
   const context = useContext(TicketContext);
   if (context === undefined) {
-    throw new Error('useTicket must be used within a TicketProvider');
+    throw new Error("useTicket must be used within a TicketProvider");
   }
   return context;
 };

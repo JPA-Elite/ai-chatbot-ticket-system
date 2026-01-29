@@ -4,14 +4,22 @@ import { ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import TicketList from '../components/tickets/TicketList';
 import { useTicket } from '../context/TicketContext';
+import { useAuth } from '../context/AuthContext';
 
 const TicketPage: React.FC = () => {
   const navigate = useNavigate();
-  const { getUserTickets } = useTicket();
+  const { getUserTickets, getAllTickets } = useTicket();
+  const { user } = useAuth();
+  
+  const isStaff = user?.role === 'admin' || user?.role === 'staff';
   
   useEffect(() => {
-    getUserTickets();
-  }, []);
+    if (isStaff) {
+      getAllTickets();
+    } else {
+      getUserTickets();
+    }
+  }, [isStaff]);
   
   const handleBack = () => {
     navigate('/dashboard');
@@ -32,13 +40,15 @@ const TicketPage: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="text-2xl font-bold text-gray-900"
         >
-          Your Support Tickets
+          {isStaff ? 'Support Tickets' : 'Your Support Tickets'}
         </motion.h1>
       </div>
       
       <p className="text-gray-600 mb-6">
-        View and manage your support tickets. When our AI assistant can't help with your questions, 
-        tickets are created automatically.
+        {isStaff 
+          ? 'View and manage all support tickets from students. Accept pending tickets to start helping.'
+          : 'View and manage your support tickets. When our AI assistant can\'t help with your questions, tickets are created automatically.'
+        }
       </p>
       
       <TicketList />
