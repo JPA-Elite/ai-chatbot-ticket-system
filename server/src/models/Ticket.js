@@ -33,8 +33,17 @@ const TicketSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['open', 'in-progress', 'resolved', 'closed'],
-    default: 'open'
+    enum: ['pending', 'accepted', 'in-progress', 'resolved', 'closed'],
+    default: 'pending'
+  },
+  acceptedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  acceptedAt: {
+    type: Date,
+    default: null
   },
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,
@@ -67,7 +76,7 @@ const TicketSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt field on save
-TicketSchema.pre('save', function(next) {
+TicketSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });

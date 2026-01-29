@@ -1,29 +1,37 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle, Clock, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useTicket } from '../../context/TicketContext';
-import { useAuth } from '../../context/AuthContext';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { AlertCircle, CheckCircle, Clock, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { useTicket } from "../../context/TicketContext";
+import { useAuth } from "../../context/AuthContext";
 
 const TicketList: React.FC = () => {
   const { tickets, loading } = useTicket();
+  const { user } = useAuth();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleTicketClick = (id: string) => {
+    if (user?.role === "staff") {
+      const uid = (user as any)?.id || (user as any)?._id || "unknown";
+      localStorage.setItem(`staffTicketsLastSeen:${uid}`, String(Date.now()));
+      window.dispatchEvent(new Event("tickets:read"));
+    }
     navigate(isAdmin ? `/admin/tickets/${id}` : `/tickets/${id}`);
   };
 
   // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
-      case 'in-progress':
+      case "pending":
+        return <Clock className="h-5 w-5 text-orange-500" />;
+      case "accepted":
+        return <CheckCircle className="h-5 w-5 text-blue-500" />;
+      case "in-progress":
         return <ArrowRight className="h-5 w-5 text-blue-500" />;
-      case 'resolved':
+      case "resolved":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'closed':
+      case "closed":
         return <CheckCircle className="h-5 w-5 text-gray-500" />;
       default:
         return <AlertCircle className="h-5 w-5 text-gray-500" />;
@@ -33,16 +41,16 @@ const TicketList: React.FC = () => {
   // Get priority class
   const getPriorityClass = (priority: string) => {
     switch (priority) {
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-blue-100 text-blue-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
+      case "low":
+        return "bg-green-100 text-green-800";
+      case "medium":
+        return "bg-blue-100 text-blue-800";
+      case "high":
+        return "bg-orange-100 text-orange-800";
+      case "urgent":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -66,7 +74,9 @@ const TicketList: React.FC = () => {
           <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
             <AlertCircle className="h-12 w-12" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No tickets found
+          </h3>
           <p className="text-gray-500">
             {isAdmin
               ? "There are no support tickets in the system yet."
@@ -98,8 +108,11 @@ const TicketList: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex items-center">
-                  <span className={`px-2 py-1 text-xs rounded-full ${getPriorityClass(ticket.priority)}`}>
-                    {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${getPriorityClass(ticket.priority)}`}
+                  >
+                    {ticket.priority.charAt(0).toUpperCase() +
+                      ticket.priority.slice(1)}
                   </span>
                   <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
                     {new Date(ticket.createdAt).toLocaleDateString()}
