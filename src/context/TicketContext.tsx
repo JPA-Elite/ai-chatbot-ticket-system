@@ -103,14 +103,14 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
 
   // Load user tickets when authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && tickets.length === 0) {
       if (isAdmin) {
         getAllTickets();
       } else {
         getUserTickets();
       }
     }
-  }, [isAuthenticated, isAdmin]);
+  }, [isAuthenticated]);
 
   // Get user tickets
   const getUserTickets = async () => {
@@ -248,6 +248,11 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
 
       if (res.data.success) {
         setCurrentTicket(res.data.data);
+        setTickets((prevTickets) =>
+          prevTickets.map((ticket) =>
+            ticket._id === id ? res.data.data : ticket,
+          ),
+        );
       }
     } catch (err: any) {
       const errorMessage =
@@ -307,7 +312,11 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
 
       if (res.data.success) {
         setCurrentTicket(res.data.data);
-        await getAllTickets();
+        setTickets((prevTickets) =>
+          prevTickets.map((ticket) =>
+            ticket._id === id ? res.data.data : ticket,
+          ),
+        );
       }
     } catch (err: any) {
       const errorMessage =
@@ -336,7 +345,11 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
 
       if (res.data.success) {
         setCurrentTicket(res.data.data);
-        await getAllTickets();
+        setTickets((prevTickets) =>
+          prevTickets.map((ticket) =>
+            ticket._id === id ? res.data.data : ticket,
+          ),
+        );
       }
     } catch (err: any) {
       const errorMessage =

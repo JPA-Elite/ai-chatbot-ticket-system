@@ -190,7 +190,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-2xl font-bold">
-              Support Request: {currentTicket.title}
+              {currentTicket.title}
             </h1>
           </div>
           <div className="flex items-center space-x-3 text-sm">

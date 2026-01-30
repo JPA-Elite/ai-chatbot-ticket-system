@@ -79,7 +79,7 @@ export const sendMessage = async (req, res) => {
       const ticket = await Ticket.create({
         userId,
         chatId: chat._id,
-        title: `Support Request: ${message.substring(0, 50)}...`,
+        title: `${message.substring(0, 50)}...`,
         description: `Chat escalated to ticket. User message: ${message}\n\nAI Response: ${aiResponse}`,
         category: 'other', // Will be classified by AI later
         priority: 'medium'

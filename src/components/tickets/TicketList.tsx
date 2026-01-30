@@ -20,17 +20,14 @@ const TicketList: React.FC = () => {
     navigate(isAdmin ? `/admin/tickets/${id}` : `/tickets/${id}`);
   };
 
-  // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pending":
-        return <Clock className="h-5 w-5 text-orange-500" />;
+        return <Clock className="h-5 w-5 text-green-500" />;
       case "accepted":
-        return <CheckCircle className="h-5 w-5 text-blue-500" />;
       case "in-progress":
         return <ArrowRight className="h-5 w-5 text-blue-500" />;
       case "resolved":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case "closed":
         return <CheckCircle className="h-5 w-5 text-gray-500" />;
       default:
@@ -38,7 +35,21 @@ const TicketList: React.FC = () => {
     }
   };
 
-  // Get priority class
+  const getStatusBorder = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "border-green-500";
+      case "accepted":
+      case "in-progress":
+        return "border-blue-500";
+      case "resolved":
+      case "closed":
+        return "border-gray-400";
+      default:
+        return "border-gray-300";
+    }
+  };
+
   const getPriorityClass = (priority: string) => {
     switch (priority) {
       case "low":
@@ -97,7 +108,7 @@ const TicketList: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
             onClick={() => handleTicketClick(ticket._id)}
-            className="hover:bg-gray-50 cursor-pointer transition-colors"
+            className={`hover:bg-gray-50 cursor-pointer transition-colors border-l-4 ${getStatusBorder(ticket.status)}`}
           >
             <div className="px-4 py-4 sm:px-6">
               <div className="flex items-center justify-between">
