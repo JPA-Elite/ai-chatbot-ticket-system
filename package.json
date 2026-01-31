@@ -12,6 +12,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
+    "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.6.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",

@@ -1,6 +1,7 @@
 import { a } from "framer-motion/client";
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
+import { translate } from '@vitalets/google-translate-api';
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -27,7 +28,7 @@ const escalationTriggers = [
  * @param {String} latestMessage - Latest AI-generated message
  * @returns {Boolean|String} - true if escalation needed, else AI response
  */
-export async function analyzeConversation(chatHistory, latestMessage = "") {
+export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true) {
   try {
     const prompt = `
       You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
@@ -69,6 +70,10 @@ export async function analyzeConversation(chatHistory, latestMessage = "") {
       const relevantInquiries = await findRelevantInquiriesAI(latestMessage);
       if (relevantInquiries.length > 0) {
         return relevantInquiries[0].promptResponse;
+      }
+
+      if (isRespondToEscalation) {
+        return "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket.";
       }
 
       return aiDecision; // return the AI's response if no escalation needed
@@ -272,7 +277,8 @@ function cosineSimilarity(a, b) {
  * @returns {Array} - Relevant inquiries
  */
 export async function findRelevantInquiriesAI(userQuestion) {
-  const userEmbedding = await createEmbedding(userQuestion);
+  const englishQuestion = await detectAndTranslateToEnglish(userQuestion);
+  const userEmbedding = await createEmbedding(preprocessText(englishQuestion));
   const inquiries = await Inquiry.find({ isEnabled: true });
 
   const scored = inquiries.map(inquiry => ({
@@ -283,6 +289,35 @@ export async function findRelevantInquiriesAI(userQuestion) {
   return scored
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
-    .filter(item => item.score > 0.75) // threshold
+    .filter(item => item.score > 0.6) // threshold
     .map(item => item.inquiry);
+}
+
+/**
+ * Preprocess text for embedding generation (multilingual safe)
+ * @param {String} text - Input text
+ * @returns {String} - Preprocessed text
+ */
+export function preprocessText(text) {
+  return text
+    .toLowerCase()          // normalize case
+    .normalize("NFKC")      // normalize characters
+    .replace(/\s+/g, " ")   // collapse multiple spaces
+    .trim();                // remove leading/trailing spaces
+}
+
+/**
+ * Detect and translate user text to English
+ * @param {string} text
+ * @returns {Promise<string>}
+ */
+export async function detectAndTranslateToEnglish(text) {
+  try {
+    const res = await translate(text, { to: 'en' });
+    console.log("Translation result:", res.text);
+    return res.text;
+  } catch (error) {
+    console.error("Translation error:", error);
+    return text;
+  }
 }
