@@ -1,26 +1,44 @@
 import Inquiry from '../models/Inquiry.js';
 import { createEmbedding, preprocessText } from '../services/aiService.js';
 
-// @desc    Get all inquiry members with statistics
+// @desc    Get all inquiries with pagination & search
 // @route   GET /api/inquiry
 // @access  Private/Admin
 export const getAllInquiry = async (req, res) => {
   try {
-    const inquiries = await Inquiry.find().sort({ createdAt: -1 });
+    let { page = 1, limit = 5, search = '' } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const query = search
+      ? {
+          $or: [
+            { promptQuestion: { $regex: search, $options: 'i' } },
+            { promptResponse: { $regex: search, $options: 'i' } },
+          ],
+        }
+      : {};
+
+    const total = await Inquiry.countDocuments(query);
+    const inquiries = await Inquiry.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
       count: inquiries.length,
-      data: inquiries
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data: inquiries,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
 // @desc    Get inquiry member by ID with detailed statistics
 // @route   GET /api/inquiry/:id

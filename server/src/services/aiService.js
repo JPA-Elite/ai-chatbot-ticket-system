@@ -1,7 +1,7 @@
 import { a } from "framer-motion/client";
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
-import { translate } from '@vitalets/google-translate-api';
+import { detectEnglishLanguage } from "../utils/utils.js";
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -273,6 +273,7 @@ function cosineSimilarity(a, b) {
 
 /**
  * Find relevant inquiries based on user question using embeddings
+ * Supports multilingual inquiries
  * @param {String} userQuestion - User's question
  * @returns {Array} - Relevant inquiries
  */
@@ -281,15 +282,26 @@ export async function findRelevantInquiriesAI(userQuestion) {
   const userEmbedding = await createEmbedding(preprocessText(englishQuestion));
   const inquiries = await Inquiry.find({ isEnabled: true });
 
-  const scored = inquiries.map(inquiry => ({
-    inquiry,
-    score: cosineSimilarity(userEmbedding, inquiry.embedding)
+  const scored = await Promise.all(inquiries.map(async (inquiry) => {
+    let inquiryText = inquiry.promptQuestion;
+
+    if (!detectEnglishLanguage(inquiryText)) {
+      // Temporarily translate to English to compute embedding
+      inquiryText = await detectAndTranslateToEnglish(inquiryText);
+    }
+
+    const embedding = inquiry.embedding && detectEnglishLanguage(inquiry.promptQuestion)
+      ? inquiry.embedding
+      : await createEmbedding(preprocessText(inquiryText));
+
+    const score = cosineSimilarity(userEmbedding, embedding);
+    return { inquiry, score };
   }));
 
   return scored
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
-    .filter(item => item.score > 0.6) // threshold
+    .filter(item => item.score > 0.75) // threshold
     .map(item => item.inquiry);
 }
 
@@ -307,17 +319,40 @@ export function preprocessText(text) {
 }
 
 /**
- * Detect and translate user text to English
- * @param {string} text
- * @returns {Promise<string>}
+ * Detect language and translate to English using OpenAI
+ * @param {string} text - User input text
+ * @returns {Promise<string>} - English text
  */
 export async function detectAndTranslateToEnglish(text) {
-  try {
-    const res = await translate(text, { to: 'en' });
-    console.log("Translation result:", res.text);
-    return res.text;
-  } catch (error) {
-    console.error("Translation error:", error);
+  if (detectEnglishLanguage(text)){
     return text;
+  }
+
+  try {
+    const prompt = `
+      You are an AI translator.
+      Detect the language of the following text.
+      If it is not in English, translate it into English.
+      Respond ONLY with the English version.
+
+      Text:
+      "${text}"
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: process.env.CHATGPT_MODEL,
+      messages: [
+        { role: "system", content: "You are a translation assistant." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0
+    });
+
+    const translatedText = response.choices[0].message.content.trim();
+    console.log("Translated Text:", translatedText);
+    return translatedText;
+  } catch (error) {
+    console.error("OpenAI translation error:", error);
+    return text; // fallback to original text
   }
 }

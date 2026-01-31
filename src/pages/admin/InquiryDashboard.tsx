@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { UserPlus, AlertTriangle } from 'lucide-react';
+import { UserPlus, AlertTriangle, Search, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -36,34 +36,51 @@ const InquiryDashboard: React.FC = () => {
   });
   const { token, user: currentUser } = useAuth();
 
-  useEffect(() => {
-    fetchInquirys();
-  }, []);
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [perPage, setPerPage] = useState(5);
 
-  const fetchInquirys = async () => {
+
+  const fetchInquiries = async (page = 1,
+    search = '',
+    limit = perPage
+  ) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get('http://localhost:5000/api/inquiry', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
+      const res = await axios.get('http://localhost:5000/api/inquiry', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { page, limit, search },
       });
 
-      if (response.data.success) {
-        setInquiries(response.data.data);
+      if (res.data.success) {
+        setInquiries(res.data.data);
+        setCurrentPage(res.data.page);
+        setTotalPages(res.data.totalPages);
       } else {
-        throw new Error(response.data.message || 'Failed to fetch inquiries');
+        throw new Error(res.data.message || 'Failed to fetch inquiries');
       }
-    } catch (error: any) {
-      console.error('Error fetching inquiries:', error);
-      setError(error.message);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
       toast.error('Failed to load inquiries');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleImportCSV = () => {
+    toast.info('CSV import coming soon');
+  }
+
+
+  // Fetch when page or search changes
+  useEffect(() => {
+    fetchInquiries(currentPage, searchQuery);
+  }, [currentPage]);
 
   if (loading) {
     return (
@@ -83,7 +100,7 @@ const InquiryDashboard: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Inquiry Data</h3>
           <p className="text-gray-500 mb-4">{error}</p>
           <button
-            onClick={fetchInquirys}
+            onClick={() => fetchInquiries(currentPage, searchQuery)}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
           >
             Try Again
@@ -107,8 +124,15 @@ const InquiryDashboard: React.FC = () => {
         </motion.h1>
         <p className="text-gray-600">Train AI (Artificial Intelligence) model by creating custom multiple inquiries</p>
       </div>
-      {/* Add Inquiry Button */}
-      <div className="mb-6 flex justify-end">
+
+      <div className="mb-6 flex items-center justify-between">
+        <button
+          onClick={handleImportCSV}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          <Upload className="h-5 w-5" />
+          Import CSV
+        </button>
         <button
           onClick={() => {
             setNewInquiry({
@@ -118,12 +142,64 @@ const InquiryDashboard: React.FC = () => {
             });
             setShowAddModal(true);
           }}
-          className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <UserPlus className="h-5 w-5" />
           Add New Inquiry
         </button>
       </div>
+
+
+      <div className="mb-4 flex items-center justify-between">
+        {/* Per Page (LEFT) */}
+        <div className="flex items-center space-x-2">
+          <label className="text-sm text-gray-600">Show</label>
+          <select
+            value={perPage}
+            onChange={e => {
+              const value = Number(e.target.value);
+              setPerPage(value);
+              setCurrentPage(1);
+              fetchInquiries(1, searchQuery, value);
+            }}
+            className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-600">entries</span>
+        </div>
+
+        {/* Search (RIGHT) */}
+        <div className="flex items-center space-x-2 w-full max-w-md">
+          <Search className="h-5 w-5 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search inquiries..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                setCurrentPage(1);
+                fetchInquiries(1, searchQuery, perPage);
+              }
+            }}
+            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            onClick={() => {
+              setCurrentPage(1);
+              fetchInquiries(1, searchQuery, perPage);
+            }}
+            className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+          >
+            Search
+          </button>
+        </div>
+      </div>
+
       {/* Inquiry Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -169,7 +245,7 @@ const InquiryDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex text-xs font-semibold rounded-full ${inquiry.isEnabled
+                    <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${inquiry.isEnabled
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
                       }`}>
@@ -209,6 +285,94 @@ const InquiryDashboard: React.FC = () => {
               ))}
             </tbody>
           </table>
+          {/* Pagination */}
+          <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200 bg-gray-50">
+            {/* Info */}
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing{' '}
+                <span className="font-medium">
+                  {(currentPage - 1) * perPage + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-medium">
+                  {Math.min(currentPage * perPage, totalPages * perPage)}
+                </span>{' '}
+                of <span className="font-medium">{totalPages * perPage}</span> results
+              </p>
+            </div>
+
+            {/* Pagination Controls */}
+            <nav
+              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+              aria-label="Pagination"
+            >
+              {/* Previous */}
+              <button
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 ${currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                  }`}
+              >
+                <span className="sr-only">Previous</span>
+                <svg
+                  className="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+
+              {/* Page Numbers */}
+              {[...Array(totalPages)].map((_, i) => {
+                const page = i + 1;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
+                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+
+              {/* Next */}
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage === totalPages}
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 ${currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                  }`}
+              >
+                <span className="sr-only">Next</span>
+                <svg
+                  className="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
       {/* Delete Modal */}
@@ -263,7 +427,7 @@ const InquiryDashboard: React.FC = () => {
           <textarea
             placeholder="ex: To reset your password, click on 'Forgot Password' at the login page and follow the instructions sent to your registered email."
             className="w-full border px-3 py-2 rounded resize-none placeholder:text-sm text-sm"
-            rows={5}
+            rows={15}
             cols={20}
             value={newInquiry.promptResponse}
             onChange={e =>
@@ -334,7 +498,7 @@ const InquiryDashboard: React.FC = () => {
             <textarea
               placeholder="Edit Prompt Response..."
               className="w-full border px-3 py-2 rounded resize-none placeholder:text-sm text-sm"
-              rows={5}
+              rows={15}
               cols={20}
               value={editInquiry.promptResponse}
               onChange={e =>
@@ -397,7 +561,7 @@ const InquiryDashboard: React.FC = () => {
       .then(res => {
         if (res.data.success) {
           toast.success('Inquiry deleted successfully');
-          fetchInquirys();
+          fetchInquiries();
         } else {
           toast.error(res.data.message || 'Failed to delete inquiry');
         }
@@ -429,7 +593,7 @@ const InquiryDashboard: React.FC = () => {
             promptResponse: '',
             isEnabled: true,
           });
-          fetchInquirys();
+          fetchInquiries();
         } else {
           toast.error(res.data.message || 'Failed to add inquiry');
         }
@@ -442,7 +606,6 @@ const InquiryDashboard: React.FC = () => {
 
   function handleUpdateInquiry() {
     if (!editInquiry) return;
-
 
     axios.put(
       `http://localhost:5000/api/inquiry/${editInquiry._id}`,
@@ -462,7 +625,7 @@ const InquiryDashboard: React.FC = () => {
           toast.success('Inquiry updated successfully');
           setShowEditModal(false);
           setEditInquiry(null);
-          fetchInquirys();
+          fetchInquiries();
         } else {
           toast.error(res.data.message || 'Failed to update inquiry');
         }
