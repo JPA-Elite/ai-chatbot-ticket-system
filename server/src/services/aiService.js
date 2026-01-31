@@ -47,6 +47,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
         - asks for help beyond AI capability
         - reports bugs, errors, billing, payment, or account issues
         - explicitly requests escalation or human assistance
+        - asks like 'help me file a ticket, create a ticket, open a ticket, submit a ticket, etc.'
 
         Return ONLY:
         YES
