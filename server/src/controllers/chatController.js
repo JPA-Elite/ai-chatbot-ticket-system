@@ -1,6 +1,6 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
-import { analyzeConversation, generateMockResponse } from '../services/aiService.js';
+import { analyzeConversation, findRelevantInquiriesAI } from '../services/aiService.js';
 
 // @desc    Start or continue a chat session
 // @route   POST /api/chat/message
@@ -10,6 +10,8 @@ export const sendMessage = async (req, res) => {
     const { message, chatId } = req.body;
     const userId = req.user.id;
 
+    const relavant = await findRelevantInquiriesAI(message);
+    console.log('relevant', relavant); // fire and forget
     let chat;
 
     // Find existing chat or create a new one

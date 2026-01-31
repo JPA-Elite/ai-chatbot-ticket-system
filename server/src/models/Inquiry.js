@@ -17,6 +17,10 @@ const InquirySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  embedding: {
+    type: [Number], // vector
+    required: true
+  },
   createdAt: {
     type: Date,
     default: Date.now

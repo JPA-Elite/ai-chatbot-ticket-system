@@ -1,5 +1,6 @@
 import { a } from "framer-motion/client";
 import openai from "../config/openaiClient.js";
+import Inquiry from "../models/Inquiry.js";
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -62,6 +63,12 @@ export async function analyzeConversation(chatHistory, latestMessage = "") {
     } else {
       if (getRuleBasedResponse(latestMessage)) {
         return getRuleBasedResponse(latestMessage);
+      }
+
+      // From custom inquiries AI training model
+      const relevantInquiries = await findRelevantInquiriesAI(latestMessage);
+      if (relevantInquiries.length > 0) {
+        return relevantInquiries[0].promptResponse;
       }
 
       return aiDecision; // return the AI's response if no escalation needed
@@ -230,4 +237,52 @@ export async function generateChatResponse(messages) {
   });
 
   return response.choices[0].message.content;
+}
+
+/**
+ * Create embedding for given text using OpenAI
+ * @param {String} text - Input text
+ * @returns {Array} - Embedding vector
+ */
+export async function createEmbedding(text) {
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: text
+  });
+
+  return embedding.data[0].embedding;
+}
+
+/**
+ *
+ * @param {*} a - First vector
+ * @param {*} b - Second vector
+ * @returns {Number} - Cosine similarity value between 0 and 1
+ */
+function cosineSimilarity(a, b) {
+  const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  return dot / (magA * magB);
+}
+
+/**
+ * Find relevant inquiries based on user question using embeddings
+ * @param {String} userQuestion - User's question
+ * @returns {Array} - Relevant inquiries
+ */
+export async function findRelevantInquiriesAI(userQuestion) {
+  const userEmbedding = await createEmbedding(userQuestion);
+  const inquiries = await Inquiry.find({ isEnabled: true });
+
+  const scored = inquiries.map(inquiry => ({
+    inquiry,
+    score: cosineSimilarity(userEmbedding, inquiry.embedding)
+  }));
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .filter(item => item.score > 0.75) // threshold
+    .map(item => item.inquiry);
 }

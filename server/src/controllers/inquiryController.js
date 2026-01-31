@@ -1,4 +1,5 @@
 import Inquiry from '../models/Inquiry.js';
+import { createEmbedding } from '../services/aiService.js';
 
 // @desc    Get all inquiry members with statistics
 // @route   GET /api/inquiry
@@ -64,8 +65,17 @@ export const updateInquiry = async (req, res) => {
 
     const { promptQuestion, promptResponse, isEnabled } = req.body;
 
-    inquiry.promptQuestion = promptQuestion || inquiry.promptQuestion;
-    inquiry.promptResponse = promptResponse || inquiry.promptResponse;
+    // 1. If question changed → regenerate embedding
+    if (promptQuestion && promptQuestion !== inquiry.promptQuestion) {
+      inquiry.promptQuestion = promptQuestion;
+      inquiry.embedding = await createEmbedding(promptQuestion);
+    }
+
+    // 2. Normal updates
+    if (promptResponse) {
+      inquiry.promptResponse = promptResponse;
+    }
+
     if (isEnabled !== undefined) {
       inquiry.isEnabled = isEnabled;
     }
@@ -91,10 +101,12 @@ export const updateInquiry = async (req, res) => {
 export const createInquiry = async (req, res) => {
   try {
     const { promptQuestion, promptResponse, isEnabled } = req.body;
+    const embedding = await createEmbedding(promptQuestion);
 
     const newInquiry = new Inquiry({
       promptQuestion,
       promptResponse,
+      embedding,
       isEnabled: isEnabled || false
     });
 
