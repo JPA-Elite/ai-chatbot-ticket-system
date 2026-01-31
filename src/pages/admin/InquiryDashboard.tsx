@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { UserPlus, AlertTriangle, Search, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +42,16 @@ const InquiryDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [perPage, setPerPage] = useState(5);
 
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [processingText, setProcessingText] = useState('Creating possible inquiries based on the uploaded file...');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [showSelectCountModal, setShowSelectCountModal] = useState(false);
+  const [selectedInquiryCount, setSelectedInquiryCount] = useState(10); // default 10
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isProcessingSuccess, setIsProcessingSuccess] = useState(false);
+  const [hasCreatedInquiries, setHasCreatedInquiries] = useState<boolean | null>(null);
+  const MAX_FILE_SIZE_MB = 1;
+  const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 
   const fetchInquiries = async (page = 1,
     search = '',
@@ -72,10 +82,198 @@ const InquiryDashboard: React.FC = () => {
     }
   };
 
-  const handleImportCSV = () => {
-    toast.info('CSV import coming soon');
+  const handleImportFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const uploadFileWithCount = async (file: File, count: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('count', String(count));
+
+    try {
+      setShowProcessingModal(true);
+      setIsProcessingSuccess(false);
+
+      const { data } = await axios.post('http://localhost:5000/api/inquiry/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      console.log('TEXT FROM BACKEND ↓↓↓');
+      console.log(data.inquiries);
+
+      setProcessingText('Creating inquiries...');
+
+      // simulate creation delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      setIsProcessingSuccess(true);
+      if (data.inquiries && data.inquiries.length > 0) {
+        setHasCreatedInquiries(true);
+        setProcessingText('Inquiries created successfully!');
+      } else {
+        setHasCreatedInquiries(false);
+        setProcessingText('Sorry, no inquiries were created.');
+      }
+
+      fetchInquiries();
+
+      setTimeout(() => {
+        setShowProcessingModal(false);
+        setProcessingText('Creating possible inquiries based on the uploaded file...');
+        setIsProcessingSuccess(false);
+        setHasCreatedInquiries(null);
+      }, 1500);
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || err.message || 'Import failed');
+      setShowProcessingModal(false);
+      setIsProcessingSuccess(false);
+    }
+  };
+
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedExtensions = ['csv', 'txt', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (!ext || !allowedExtensions.includes(ext)) {
+      toast.error('Unsupported file type');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File size exceeds 1MB limit');
+      e.target.value = '';
+      return;
+    }
+
+    // ✅ Store file temporarily and open select count modal
+    setPendingFile(file);
+    setShowSelectCountModal(true);
+
+    e.target.value = ''; // reset to allow re-selecting same file later
+  };
+
+  function handleDeleteInquiry(inquiryId: string) {
+    axios.delete(`http://localhost:5000/api/inquiry/${inquiryId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+    })
+      .then(res => {
+        if (res.data.success) {
+          toast.success('Inquiry deleted successfully');
+          fetchInquiries();
+        } else {
+          toast.error(res.data.message || 'Failed to delete inquiry');
+        }
+      })
+      .catch(err => {
+        console.error('Error deleting inquiry:', err);
+        toast.error(err?.response?.data?.message || 'Error deleting inquiry');
+      });
   }
 
+  function handleAddInquiry() {
+    axios.post('http://localhost:5000/api/inquiry',
+      {
+        promptQuestion: newInquiry.promptQuestion,
+        promptResponse: newInquiry.promptResponse,
+        isEnabled: newInquiry.isEnabled,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+      })
+      .then(res => {
+        if (res.data.success) {
+          toast.success('Inquiry added successfully');
+          setShowAddModal(false);
+          setNewInquiry({
+            promptQuestion: '',
+            promptResponse: '',
+            isEnabled: true,
+          });
+          fetchInquiries();
+        } else {
+          toast.error(res.data.message || 'Failed to add inquiry');
+        }
+      })
+      .catch(err => {
+        console.error('Error adding inquiry:', err);
+        toast.error(err?.response?.data?.message || 'Error adding inquiry');
+      });
+  }
+
+  function handleUpdateInquiry() {
+    if (!editInquiry) return;
+
+    axios.put(
+      `http://localhost:5000/api/inquiry/${editInquiry._id}`,
+      {
+        promptQuestion: editInquiry.promptQuestion,
+        promptResponse: editInquiry.promptResponse,
+        isEnabled: editInquiry.isEnabled,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+      .then(res => {
+        if (res.data.success) {
+          toast.success('Inquiry updated successfully');
+          setShowEditModal(false);
+          setEditInquiry(null);
+          fetchInquiries();
+        } else {
+          toast.error(res.data.message || 'Failed to update inquiry');
+        }
+      })
+      .catch(err => {
+        console.error('Error updating inquiry:', err);
+        toast.error(err?.response?.data?.message || 'Error updating inquiry');
+      });
+  }
+
+  const getPaginationRange = (
+    current: number,
+    total: number,
+    siblingCount = 1
+  ) => {
+    const range: (number | string)[] = [];
+
+    const start = Math.max(2, current - siblingCount);
+    const end = Math.min(total - 1, current + siblingCount);
+
+    range.push(1);
+
+    if (start > 2) {
+      range.push('...');
+    }
+
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+
+    if (end < total - 1) {
+      range.push('...');
+    }
+
+    if (total > 1) {
+      range.push(total);
+    }
+
+    return range;
+  };
 
   // Fetch when page or search changes
   useEffect(() => {
@@ -126,12 +324,19 @@ const InquiryDashboard: React.FC = () => {
       </div>
 
       <div className="mb-6 flex items-center justify-between">
+        <input
+          type="file"
+          accept=".csv,.txt,.pdf,.doc,.docx,.xls,.xlsx"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+        />
         <button
-          onClick={handleImportCSV}
+          onClick={handleImportFile}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <Upload className="h-5 w-5" />
-          Import CSV
+          Import File
         </button>
         <button
           onClick={() => {
@@ -285,31 +490,14 @@ const InquiryDashboard: React.FC = () => {
               ))}
             </tbody>
           </table>
-          {/* Pagination */}
-          <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200 bg-gray-50">
-            {/* Info */}
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing{' '}
-                <span className="font-medium">
-                  {(currentPage - 1) * perPage + 1}
-                </span>{' '}
-                to{' '}
-                <span className="font-medium">
-                  {Math.min(currentPage * perPage, totalPages * perPage)}
-                </span>{' '}
-                of <span className="font-medium">{totalPages * perPage}</span> results
-              </p>
-            </div>
-
-            {/* Pagination Controls */}
+          <div>
             <nav
-              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+              className="relative z-0 flex justify-end px-2 py-2 rounded-md shadow-sm -space-x-px"
               aria-label="Pagination"
             >
               {/* Previous */}
               <button
-                onClick={() => setCurrentPage(prev => prev - 1)}
+                onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
                 className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 ${currentPage === 1
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -330,14 +518,22 @@ const InquiryDashboard: React.FC = () => {
                   />
                 </svg>
               </button>
+              {getPaginationRange(currentPage, totalPages).map((page, index) => {
+                if (page === '...') {
+                  return (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-400 text-sm"
+                    >
+                      …
+                    </span>
+                  );
+                }
 
-              {/* Page Numbers */}
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
                 return (
                   <button
                     key={page}
-                    onClick={() => setCurrentPage(page)}
+                    onClick={() => setCurrentPage(page as number)}
                     className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
                       ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                       : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -347,10 +543,9 @@ const InquiryDashboard: React.FC = () => {
                   </button>
                 );
               })}
-
               {/* Next */}
               <button
-                onClick={() => setCurrentPage(prev => prev + 1)}
+                onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 ${currentPage === totalPages
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -548,94 +743,114 @@ const InquiryDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
+      <Modal
+        open={showSelectCountModal}
+        title="Select Number of Inquiries"
+        onClose={() => setShowSelectCountModal(false)}
+        size="sm"
+      >
+        <div className="flex flex-col items-center gap-4 py-4">
+          <div className="flex items-start gap-2 p-3 w-full bg-yellow-50 border-l-4 border-yellow-400 rounded shadow-sm">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-yellow-500 mt-0.5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path fillRule="evenodd" d="M18 10c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8zm-9 3a1 1 0 102 0v-2a1 1 0 10-2 0v2zm1-8a1 1 0 00-.993.883L9 6v4a1 1 0 001.993.117L11 10V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <p className="text-yellow-700 text-sm">
+              Q&A format files are <strong>ignored for this settings</strong>.
+            </p>
+          </div>
+          <p className="text-gray-700 text-sm text-center">
+            Choose how many inquiries to create from this file:
+          </p>
+          <input
+            type="range"
+            min={1}
+            max={100}
+            value={selectedInquiryCount}
+            onChange={(e) => setSelectedInquiryCount(Number(e.target.value))}
+            className="w-full"
+          />
+          <p className="text-gray-700 font-semibold">{selectedInquiryCount} inquiries</p>
+
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              onClick={() => setShowSelectCountModal(false)}
+              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                setShowSelectCountModal(false);
+                if (pendingFile) uploadFileWithCount(pendingFile, selectedInquiryCount);
+                setPendingFile(null);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              Proceed
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        open={showProcessingModal}
+        title="Processing File"
+        onClose={() => { }}
+        size="sm"
+      >
+        <div className="flex flex-col items-center justify-center py-8">
+          {isProcessingSuccess ? (
+            hasCreatedInquiries ? (
+              // ✅ Success (Check)
+              <svg
+                className="h-12 w-12 text-green-500 mb-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            ) : (
+              // ❌ No results (X mark)
+              <svg
+                className="h-12 w-12 text-red-500 mb-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            )
+          ) : (
+            // ⏳ Spinner
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          )}
+          <p className="text-center text-gray-700">{processingText}</p>
+        </div>
+      </Modal>
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
     </div>
   );
-
-  function handleDeleteInquiry(inquiryId: string) {
-    axios.delete(`http://localhost:5000/api/inquiry/${inquiryId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-    })
-      .then(res => {
-        if (res.data.success) {
-          toast.success('Inquiry deleted successfully');
-          fetchInquiries();
-        } else {
-          toast.error(res.data.message || 'Failed to delete inquiry');
-        }
-      })
-      .catch(err => {
-        console.error('Error deleting inquiry:', err);
-        toast.error(err?.response?.data?.message || 'Error deleting inquiry');
-      });
-  }
-
-  function handleAddInquiry() {
-    axios.post('http://localhost:5000/api/inquiry',
-      {
-        promptQuestion: newInquiry.promptQuestion,
-        promptResponse: newInquiry.promptResponse,
-        isEnabled: newInquiry.isEnabled,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-      })
-      .then(res => {
-        if (res.data.success) {
-          toast.success('Inquiry added successfully');
-          setShowAddModal(false);
-          setNewInquiry({
-            promptQuestion: '',
-            promptResponse: '',
-            isEnabled: true,
-          });
-          fetchInquiries();
-        } else {
-          toast.error(res.data.message || 'Failed to add inquiry');
-        }
-      })
-      .catch(err => {
-        console.error('Error adding inquiry:', err);
-        toast.error(err?.response?.data?.message || 'Error adding inquiry');
-      });
-  }
-
-  function handleUpdateInquiry() {
-    if (!editInquiry) return;
-
-    axios.put(
-      `http://localhost:5000/api/inquiry/${editInquiry._id}`,
-      {
-        promptQuestion: editInquiry.promptQuestion,
-        promptResponse: editInquiry.promptResponse,
-        isEnabled: editInquiry.isEnabled,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
-      .then(res => {
-        if (res.data.success) {
-          toast.success('Inquiry updated successfully');
-          setShowEditModal(false);
-          setEditInquiry(null);
-          fetchInquiries();
-        } else {
-          toast.error(res.data.message || 'Failed to update inquiry');
-        }
-      })
-      .catch(err => {
-        console.error('Error updating inquiry:', err);
-        toast.error(err?.response?.data?.message || 'Error updating inquiry');
-      });
-  }
-
 };
 
 export default InquiryDashboard;

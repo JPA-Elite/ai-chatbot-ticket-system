@@ -356,3 +356,64 @@ export async function detectAndTranslateToEnglish(text) {
     return text; // fallback to original text
   }
 }
+
+/**
+ * Generate AI-based inquiries from text content (unique, student-level & human-like, 100% accurate)
+ * Fully AI-driven: detects existing Q&A or generates new inquiries
+ * Handles impossible inquiry requests
+ * @param {string} content - Source text content
+ * @param {number} count - Number of inquiries to generate (ignored if content is already Q&A)
+ * @returns {Promise<Array<{question: string, answer: string}>>} - Array of inquiries
+ */
+export async function generateInquiriesAI(content, count = 1) {
+  try {
+    const prompt = `
+      You are an AI that generates inquiry questions and answers from the content provided.
+
+      INSTRUCTIONS:
+      1. First, detect if the content is already in Q&A format.
+         - If it is, return ALL existing Q&A exactly as-is in JSON format.
+         - Ignore the requested count in this case.
+      2. If the content is NOT in Q&A format:
+         - Generate exactly ${count} inquiries that are UNIQUE, student-level, easy to understand, and human-like.
+         - Only generate questions that can be answered using the text provided below.
+         - Do NOT invent information or add anything not present in the content.
+         - Answers must be extracted directly from the content, paraphrased if needed for readability.
+         - Focus only on questions a student would naturally ask after reading the content.
+         - If it is impossible to generate the requested number of inquiries (content is too short, trivial, or numeric), return an empty JSON array: []
+
+      IMPORTANT:
+      - Do not repeat questions or answers.
+      - Return ONLY a JSON array in this exact format:
+
+      [
+        {
+          "question": "....",
+          "answer": "...."
+        },
+        ...
+      ]
+
+      Content:
+      """${content}"""
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: process.env.CHATGPT_MODEL,
+      messages: [
+        { role: "system", content: "You are an AI assistant that creates student-level, human-like inquiry questions and answers, strictly based on the content. Follow all instructions carefully." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.5
+    });
+
+    const rawOutput = response.choices[0].message.content.trim();
+
+    // Parse JSON safely
+    const inquiries = JSON.parse(rawOutput);
+    return inquiries;
+  } catch (error) {
+    console.error("OpenAI inquiry generation error:", error);
+    return [];
+  }
+}

@@ -1,5 +1,9 @@
 import Inquiry from '../models/Inquiry.js';
-import { createEmbedding, preprocessText } from '../services/aiService.js';
+import { createEmbedding, preprocessText, generateInquiriesAI } from '../services/aiService.js';
+import { MAX_CHARS } from '../constants/constants.js';
+import csv from 'csv-parser';
+import textract from 'textract';
+import { Readable } from 'stream';
 
 // @desc    Get all inquiries with pagination & search
 // @route   GET /api/inquiry
@@ -170,6 +174,82 @@ export const deleteInquiry = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error'
+    });
+  }
+};
+
+export const importInquiryFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const allowedExtensions = ['csv', 'txt', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+
+    if (!allowedExtensions.includes(ext)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file type',
+      });
+    }
+
+    let text = '';
+
+    if (ext === 'txt') {
+      text = req.file.buffer.toString('utf-8');
+    } else {
+      // Use textract for pdf/doc/docx/xls/xlsx
+      text = await new Promise((resolve, reject) => {
+        textract.fromBufferWithName(req.file.originalname, req.file.buffer, (err, result) => {
+          if (err) return reject(err);
+          resolve(result || '');
+        });
+      });
+    }
+
+    // Enforce character limit
+    if (text.length > MAX_CHARS) {
+      return res.status(400).json({
+        success: false,
+        message: `File exceeds ${MAX_CHARS.toLocaleString()} character limit`,
+      });
+    }
+
+        // Generate AI-based inquiries
+    const count = req.body.count ? parseInt(req.body.count, 10) : 5; // default 5 inquiries
+    const inquiries = await generateInquiriesAI(text, count);
+
+    // store inquiries in DB
+    for (const item of inquiries) {
+      const preProcessedQuestion = preprocessText(item.question);
+      const embedding = await createEmbedding(preProcessedQuestion);
+
+      const newInquiry = new Inquiry({
+        promptQuestion: preProcessedQuestion,
+        promptResponse: item.answer.trim(),
+        embedding,
+        isEnabled: true,
+      });
+
+      await newInquiry.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      text,
+      length: text.length,
+      type: ext,
+      inquiries,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during file import',
     });
   }
 };
