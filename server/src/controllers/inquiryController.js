@@ -246,10 +246,15 @@ export const importInquiryFile = async (req, res) => {
       inquiries,
     });
   } catch (error) {
+    let message = 'Server error during file import';
+    if (error.message.includes('E11000')) {
+      message = 'File Import Failed: Duplicate inquiry found';
+    }
+
     console.error(error);
     return res.status(500).json({
       success: false,
-      message: 'Server error during file import',
+      message: message,
     });
   }
 };
