@@ -1,6 +1,8 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
-import { analyzeConversation } from '../services/aiService.js';
+import User from '../models/User.js';
+import { analyzeConversation, findRelevantInquiriesAI } from '../services/aiService.js';
+import { sendTicketCreatedToStaff } from '../services/emailService.js';
 
 // @desc    Start or continue a chat session
 // @route   POST /api/chat/message
@@ -50,9 +52,6 @@ export const sendMessage = async (req, res) => {
       timestamp: Date.now()
     });
 
-    // Build chat history:
-    // - last 5 messages
-    // - each content trimmed to 1000 chars
     const chatHistory = chat.messages
       .slice(-5)
       .map(msg => ({
@@ -62,36 +61,37 @@ export const sendMessage = async (req, res) => {
           : msg.content
       }));
 
-    // Generate mock AI response (instead of calling OpenAI)
-    // let aiResponse = generateMockResponse(message, chatHistory);
     let aiResponse = "";
 
-    // Check if the response indicates escalation is needed
     const analyzeResult = await analyzeConversation(chatHistory, message);
     if (analyzeResult === true) {
       aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
-      console.log('🎫 Escalating to ticket...');
 
-      // Mark chat for escalation
       chat.escalatedToTicket = true;
 
-      // Create a ticket from the chat
       const ticket = await Ticket.create({
         userId,
         chatId: chat._id,
         title: `${message.substring(0, 50)}...`,
         description: `Chat escalated to ticket. User message: ${message}\n\nAI Response: ${aiResponse}`,
-        category: 'other', // Will be classified by AI later
+        category: 'other',
         priority: 'medium'
       });
 
-      // Link ticket to chat
       chat.ticketId = ticket._id;
+
+      try {
+        const student = await User.findById(userId).select('name email');
+        if (student) {
+          await sendTicketCreatedToStaff(ticket, student.name, student.email);
+        }
+      } catch (emailError) {
+        console.error('Error sending ticket notification email:', emailError);
+      }
     } else {
-      aiResponse = analyzeResult; // use the AI's response if no escalation needed
+      aiResponse = analyzeResult;
     }
 
-    // Add AI response to chat
     chat.messages.push({
       role: 'assistant',
       content: aiResponse,
@@ -118,9 +118,6 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// @desc    Get chat history
-// @route   GET /api/chat/:chatId
-// @access  Private
 export const getChatById = async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
@@ -153,9 +150,6 @@ export const getChatById = async (req, res) => {
   }
 };
 
-// @desc    Get all chats for a user
-// @route   GET /api/chat
-// @access  Private
 export const getUserChats = async (req, res) => {
   try {
     const chats = await Chat.find({ userId: req.user.id })
