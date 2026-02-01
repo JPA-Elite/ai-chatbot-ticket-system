@@ -1,5 +1,6 @@
 import Ticket from '../models/Ticket.js';
 import { classifyTicket } from '../services/aiService.js';
+import { sendTicketCreatedToStaff, sendTicketAcceptedToStudent } from '../services/emailService.js';
 
 // @desc    Get all tickets (admin only)
 // @route   GET /api/tickets
@@ -316,6 +317,17 @@ export const acceptTicket = async (req, res) => {
         path: 'messages.sender',
         select: 'name role'
       });
+
+  try {
+      const studentName = updatedTicket.userId?.name || 'Student';
+      const studentEmail = updatedTicket.userId?.email || '';
+      const staffName = updatedTicket.acceptedBy?.name || 'Staff';
+      if (studentEmail) {
+        await sendTicketAcceptedToStudent(updatedTicket, studentName, studentEmail, staffName);
+      }
+    } catch (emailError) {
+      console.error('Error sending acceptance email:', emailError);
+    }
 
     res.status(200).json({
       success: true,

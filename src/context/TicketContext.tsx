@@ -7,8 +7,7 @@ import React, {
 } from "react";
 import axios from "axios";
 import { useAuth } from "./AuthContext";
-
-// Types
+ 
 interface TicketMessage {
   _id: string;
   sender: {
@@ -82,11 +81,9 @@ interface TicketContextType {
     total: number;
   };
 }
-
-// Create context
+ 
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
-
-// Provider component
+ 
 export const TicketProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -100,8 +97,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
     total: 0,
   });
   const { isAuthenticated, token, isAdmin } = useAuth();
-
-  // Load user tickets when authenticated
+ 
   useEffect(() => {
     if (isAuthenticated && tickets.length === 0) {
       if (isAdmin) {
@@ -111,8 +107,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       }
     }
   }, [isAuthenticated]);
-
-  // Get user tickets
+ 
   const getUserTickets = async () => {
     try {
       setLoading(true);
@@ -135,8 +130,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(false);
     }
   };
-
-  // Get all tickets (admin only)
+ 
   const getAllTickets = async (page = 1, limit = 10, status?: string) => {
     try {
       setLoading(true);
@@ -169,8 +163,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(false);
     }
   };
-
-  // Get ticket by ID
+ 
   const getTicketById = async (id: string) => {
     try {
       setLoading(true);
@@ -263,8 +256,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(false);
     }
   };
-
-  // Classify ticket using AI
+ 
   const classifyTicket = async (id: string) => {
     try {
       setLoading(true);

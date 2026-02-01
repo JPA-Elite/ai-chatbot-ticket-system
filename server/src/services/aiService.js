@@ -1,4 +1,3 @@
-import { a } from "framer-motion/client";
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
 import { detectEnglishLanguage } from "../utils/utils.js";
@@ -15,7 +14,7 @@ const mockResponses = [
   "Thank you for your question. This seems like something that requires specialized knowledge, so I'll create a support ticket for you.",
   "I'm not able to fully address this technical issue. Let me escalate this to a human agent who can provide better assistance.",
   "This appears to be a billing-related question that I cannot handle. I'll create a ticket for our billing team to review."
-];
+]; 
 
 const escalationTriggers = [
   "billing", "payment", "refund", "technical issue", "bug", "error",
