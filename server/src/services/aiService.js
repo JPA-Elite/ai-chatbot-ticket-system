@@ -2,6 +2,7 @@ import { a } from "framer-motion/client";
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
 import { detectEnglishLanguage } from "../utils/utils.js";
+import { FILLER_PHRASES } from "../constants/constants.js";
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -239,7 +240,7 @@ export async function generateChatResponse(messages) {
   const response = await openai.chat.completions.create({
     model: process.env.CHATGPT_MODEL,
     messages,
-    temperature: 0.7,
+    temperature: 0,
   });
 
   return response.choices[0].message.content;
@@ -266,10 +267,17 @@ export async function createEmbedding(text) {
  * @returns {Number} - Cosine similarity value between 0 and 1
  */
 function cosineSimilarity(a, b) {
-  const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
-  const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-  const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-  return dot / (magA * magB);
+  let dot = 0, magA = 0, magB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+
+  if (magA === 0 || magB === 0) return 0;
+
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
 }
 
 /**
@@ -280,7 +288,8 @@ function cosineSimilarity(a, b) {
  */
 export async function findRelevantInquiriesAI(userQuestion) {
   const englishQuestion = await detectAndTranslateToEnglish(userQuestion);
-  const userEmbedding = await createEmbedding(preprocessText(englishQuestion));
+  const canonicalQuestion = await canonicalizeQuestion(englishQuestion);
+  const userEmbedding = await createEmbedding(preprocessText(canonicalQuestion, true));
   const inquiries = await Inquiry.find({ isEnabled: true });
 
   const scored = await Promise.all(inquiries.map(async (inquiry) => {
@@ -293,7 +302,7 @@ export async function findRelevantInquiriesAI(userQuestion) {
 
     const embedding = inquiry.embedding && detectEnglishLanguage(inquiry.promptQuestion)
       ? inquiry.embedding
-      : await createEmbedding(preprocessText(inquiryText));
+      : await createEmbedding(preprocessText(inquiryText, true));
 
     const score = cosineSimilarity(userEmbedding, embedding);
     return { inquiry, score };
@@ -302,7 +311,7 @@ export async function findRelevantInquiriesAI(userQuestion) {
   return scored
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
-    .filter(item => item.score > 0.75) // threshold
+    .filter(item => item.score > 0.6) // threshold
     .map(item => item.inquiry);
 }
 
@@ -311,12 +320,19 @@ export async function findRelevantInquiriesAI(userQuestion) {
  * @param {String} text - Input text
  * @returns {String} - Preprocessed text
  */
-export function preprocessText(text) {
-  return text
-    .toLowerCase()          // normalize case
-    .normalize("NFKC")      // normalize characters
-    .replace(/\s+/g, " ")   // collapse multiple spaces
-    .trim();                // remove leading/trailing spaces
+export function preprocessText(text, removeFillerPhrases = false) {
+  let result = text.toLowerCase().normalize("NFKC");
+
+  if (!removeFillerPhrases) {
+    return result;
+  }
+
+  for (const phrase of FILLER_PHRASES) {
+    const regex = new RegExp(`\\b${phrase}\\b`, "g");
+    result = result.replace(regex, "");
+  }
+
+  return result.replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -405,7 +421,7 @@ export async function generateInquiriesAI(content, count = 1) {
         { role: "system", content: "You are an AI assistant that creates student-level, human-like inquiry questions and answers, strictly based on the content. Follow all instructions carefully." },
         { role: "user", content: prompt }
       ],
-      temperature: 0.5
+      temperature: 0
     });
 
     const rawOutput = response.choices[0].message.content.trim();
@@ -417,4 +433,35 @@ export async function generateInquiriesAI(content, count = 1) {
     console.error("OpenAI inquiry generation error:", error);
     return [];
   }
+}
+
+/**
+ *
+ * @param {*} question
+ * @returns {Promise<String>} - Canonicalized question
+ */
+export async function canonicalizeQuestion(question) {
+  const response = await openai.chat.completions.create({
+    model: process.env.CHATGPT_MODEL,
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: "You normalize questions into a single canonical English form."
+      },
+      {
+        role: "user",
+        content: `
+          Rewrite this question into its simplest, neutral form.
+          Remove location fluff, politeness, and synonyms.
+          Respond with ONE sentence only.
+
+          Question:
+          "${question}"
+        `
+      }
+    ]
+  });
+
+  return response.choices[0].message.content.trim().toLowerCase();
 }

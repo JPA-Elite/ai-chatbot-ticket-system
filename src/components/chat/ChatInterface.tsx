@@ -11,6 +11,9 @@ import {
 import { useChat } from "../../context/ChatContext";
 import ChatMessage from "./ChatMessage";
 import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+
+const CHAT_MSG_LIMIT = 1000;
 
 interface ChatInterfaceProps {
   chatId?: string;
@@ -202,6 +205,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setMessage("");
 
     try {
+      if (currentMessage.length > CHAT_MSG_LIMIT) {
+        toast.error("Message is too long. Please limit to 2000 characters.");
+        return;
+      }
+
       const response = await sendMessage(currentMessage, currentChat?._id);
 
       if (response.escalated && response.ticketId && onEscalation) {

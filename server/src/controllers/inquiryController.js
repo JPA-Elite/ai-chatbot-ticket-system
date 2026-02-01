@@ -91,7 +91,7 @@ export const updateInquiry = async (req, res) => {
     // 1. If question changed → regenerate embedding
     if (preProcessedQuestion && preProcessedQuestion !== preprocessText(inquiry.promptQuestion)) {
       inquiry.promptQuestion = preProcessedQuestion;
-      inquiry.embedding = await createEmbedding(preProcessedQuestion);
+      inquiry.embedding = await createEmbedding(preprocessText(preProcessedQuestion, true));
     }
 
     // 2. Normal updates
@@ -125,7 +125,7 @@ export const createInquiry = async (req, res) => {
   try {
     const { promptQuestion, promptResponse, isEnabled } = req.body;
     const preProcessedQuestion = preprocessText(promptQuestion);
-    const embedding = await createEmbedding(preProcessedQuestion);
+    const embedding = await createEmbedding(preprocessText(preProcessedQuestion, true));
 
     const newInquiry = new Inquiry({
       promptQuestion: preProcessedQuestion,
@@ -226,7 +226,7 @@ export const importInquiryFile = async (req, res) => {
     // store inquiries in DB
     for (const item of inquiries) {
       const preProcessedQuestion = preprocessText(item.question);
-      const embedding = await createEmbedding(preProcessedQuestion);
+      const embedding = await createEmbedding(preprocessText(preProcessedQuestion, true));
 
       const newInquiry = new Inquiry({
         promptQuestion: preProcessedQuestion,
