@@ -64,9 +64,9 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     if (aiDecision.trim().toUpperCase() === "YES") {
       return true;
     } else {
-      if (getRuleBasedResponse(latestMessage)) {
-        return getRuleBasedResponse(latestMessage);
-      }
+      // if (getRuleBasedResponse(latestMessage)) {
+      //   return getRuleBasedResponse(latestMessage);
+      // }
 
       // From custom inquiries AI training model
       const relevantInquiries = await findRelevantInquiriesAI(latestMessage);
@@ -311,7 +311,7 @@ export async function findRelevantInquiriesAI(userQuestion) {
   return scored
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
-    .filter(item => item.score > 0.6) // threshold
+    .filter(item => item.score > 0.75) // threshold
     .map(item => item.inquiry);
 }
 
