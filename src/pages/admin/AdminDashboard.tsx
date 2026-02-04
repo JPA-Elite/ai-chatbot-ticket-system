@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ticket, CheckCircle, Clock, AlertCircle, ArrowRight, BarChart4, UserCheck } from 'lucide-react';
+import { Ticket, CheckCircle, Clock, AlertCircle, ArrowRight, BarChart4 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTicket } from '../../context/TicketContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+
+interface ConfusionMatrix {
+  tp: number;
+  fp: number;
+  fn: number;
+  tn: number;
+}
 
 interface MetricsResponse {
   status: string;
@@ -17,7 +24,7 @@ interface MetricsResponse {
     recall: number;
     f1_score: number;
     mean_confidence: number;
-    confusion_matrix: number[][];
+    confusion_matrix: ConfusionMatrix;
   };
 }
 
@@ -125,6 +132,76 @@ const AdminDashboard: React.FC = () => {
             </motion.div>
           ))}
         </div>
+        {/* Confusion Matrix */}
+        {metrics?.metrics?.confusion_matrix && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full mb-8"
+          >
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+                  Confusion Matrix
+                </h3>
+                <span className="text-xs text-gray-500">
+                  Model prediction breakdown
+                </span>
+              </div>
+
+              {/* Axis labels */}
+              <div className="grid grid-cols-4 gap-3 text-sm text-center">
+                <div></div>
+                <div className="font-medium text-gray-600">Predicted Relevant</div>
+                <div className="font-medium text-gray-600">Predicted Not Relevant</div>
+                <div></div>
+
+                {/* Actual Relevant */}
+                <div className="font-medium text-gray-600 flex items-center justify-end pr-2">
+                  Actual Relevant
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <p className="text-xs text-emerald-600 uppercase mb-1">True Positive</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {metrics.metrics.confusion_matrix.tp}
+                  </p>
+                </div>
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                  <p className="text-xs text-rose-600 uppercase mb-1">False Negative</p>
+                  <p className="text-2xl font-bold text-rose-700">
+                    {metrics.metrics.confusion_matrix.fn}
+                  </p>
+                </div>
+                <div></div>
+
+                {/* Actual Not Relevant */}
+                <div className="font-medium text-gray-600 flex items-center justify-end pr-2">
+                  Actual Not Relevant
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <p className="text-xs text-orange-600 uppercase mb-1">False Positive</p>
+                  <p className="text-2xl font-bold text-orange-700">
+                    {metrics.metrics.confusion_matrix.fp}
+                  </p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-xs text-blue-600 uppercase mb-1">True Negative</p>
+                  <p className="text-2xl font-bold text-blue-700">
+                    {metrics.metrics.confusion_matrix.tn}
+                  </p>
+                </div>
+                <div></div>
+              </div>
+
+              {/* Helper legend */}
+              <div className="mt-6 text-xs text-gray-500 text-center">
+                TP & TN indicate correct predictions • FP & FN indicate model errors
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <div className="flex justify-center mt-6">
           <button onClick={() => navigate('/admin/inquiry-relevance')} className="px-4 py-2 rounded-md bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition">
             Evaluate Output Relevance

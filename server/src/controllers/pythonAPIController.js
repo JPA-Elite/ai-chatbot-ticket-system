@@ -24,7 +24,7 @@ export const fetchMetrics = async (req, res) => {
         }));
 
         // 3️⃣ Call Python FastAPI
-        const { data } = await axios.post(
+        const response = await axios.post(
             'http://127.0.0.1:8000/compute-metrics',
             payload,
             {
@@ -33,14 +33,30 @@ export const fetchMetrics = async (req, res) => {
             }
         );
 
-        // 4️⃣ Return Python response directly to frontend
-        return res.status(200).json(data);
+        const { metrics } = response.data;
+        const [[tn, fp], [fn, tp]] = metrics.confusion_matrix;
+
+        const normalizedMetrics = {
+            ...metrics,
+            confusion_matrix: {
+                tp,
+                fp,
+                fn,
+                tn,
+            },
+        };
+
+        return res.status(200).json({
+            status: 'success',
+            metrics: normalizedMetrics,
+        });
 
     } catch (error) {
         console.error('Metrics fetch error:', error.message);
 
         return res.status(500).json({
             status: 'error',
+            metrics: {},
             message: 'Failed to fetch metrics',
         });
     }

@@ -77,6 +77,7 @@ def compute_metrics(data: List[dict]) -> dict:
     except Exception as e:
         return {
             "status": "error",
+            "metrics": {},
             "message": "Cannot compute metrics",
             "details": str(e),
             "trace": traceback.format_exc()
