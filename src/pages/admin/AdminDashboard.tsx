@@ -3,16 +3,43 @@ import { useNavigate } from 'react-router-dom';
 import { Ticket, CheckCircle, Clock, AlertCircle, ArrowRight, BarChart4, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTicket } from '../../context/TicketContext';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+
+interface MetricsResponse {
+  status: string;
+  message: string;
+  details?: string;
+  trace?: string;
+  metrics: {
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1_score: number;
+    mean_confidence: number;
+    confusion_matrix: number[][];
+  };
+}
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { tickets, getAllTickets, pagination } = useTicket();
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const { token } = useAuth();
 
   useEffect(() => {
     getAllTickets(page, 10, activeFilter || undefined);
+    getMetrics().then(setMetrics).catch(console.error);
   }, [page, activeFilter]);
+
+  const getMetrics = async (): Promise<MetricsResponse> => {
+    const response = await axios.get<MetricsResponse>('http://localhost:5000/api/metrics', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  };
 
   const getTicketStatusCount = (status: string) => {
     return tickets.filter(ticket => ticket.status === status).length;
@@ -47,27 +74,27 @@ const AdminDashboard: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           {[
             {
-              label: 'Confidence', value: '87.4%', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', icon: (
+              label: 'Confidence', value: `${metrics?.metrics.mean_confidence || 0}%`, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', icon: (
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
               )
             },
             {
-              label: 'Accuracy', value: '91.2%', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: (
+              label: 'Accuracy', value: `${metrics?.metrics.accuracy || 0}%`, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: (
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               )
             },
             {
-              label: 'Precision', value: '88.5%', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: (
+              label: 'Precision', value: `${metrics?.metrics.precision || 0}%`, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: (
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 7.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
               )
             },
             {
-              label: 'Recall', value: '85.9%', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: (
+              label: 'Recall', value: `${metrics?.metrics.recall || 0}%`, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', icon: (
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               )
             },
             {
-              label: 'F1-Score', value: '87.2%', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', icon: (
+              label: 'F1-Score', value: `${metrics?.metrics.f1_score || 0}%`, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200', icon: (
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8L13 15m5 0v6m-3-6v6m-4-6v4m-2-4v4" /></svg>
               )
             }

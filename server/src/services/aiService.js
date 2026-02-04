@@ -101,7 +101,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
           generatedResponse: RESPOND_TO_ESCALATION_MSG,
           similarityScore: relevantInquiries.length > 0 ? relevantInquiries[0].score : 0,
           responsTime: responseTime,
-          isRelevant: 0
+          isRelevant: 1
         });
 
         return RESPOND_TO_ESCALATION_MSG;
