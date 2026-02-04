@@ -80,21 +80,42 @@ export const updateInquiry = async (req, res) => {
     if (!inquiry) {
       return res.status(404).json({
         success: false,
-        message: 'Inquiry member not found'
+        message: 'Inquiry member not found',
       });
     }
 
     const { promptQuestion, promptResponse, isEnabled } = req.body;
-    const preProcessedQuestion = preprocessText(promptQuestion);
 
-    // 1. If question changed → regenerate embedding
-    if (preProcessedQuestion && preProcessedQuestion !== preprocessText(inquiry.promptQuestion)) {
-      inquiry.promptQuestion = preProcessedQuestion;
-      inquiry.embedding = await createEmbedding(preprocessText(preProcessedQuestion, true));
+    // 🔹 Handle promptQuestion update
+    if (promptQuestion) {
+      const preProcessedQuestion = preprocessText(promptQuestion);
+      const currentQuestion = preprocessText(inquiry.promptQuestion);
+
+      // If question actually changed
+      if (preProcessedQuestion !== currentQuestion) {
+        // 🔹 Check uniqueness (exclude current record)
+        const existing = await Inquiry.findOne({
+          promptQuestion: promptQuestion,
+          _id: { $ne: inquiry._id },
+        });
+
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            message: 'Prompt question already exists',
+          });
+        }
+
+        // 🔹 Update question + regenerate embedding
+        inquiry.promptQuestion = promptQuestion;
+        inquiry.embedding = await createEmbedding(
+          preprocessText(preProcessedQuestion, true)
+        );
+      }
     }
 
-    // 2. Normal updates
-    if (promptResponse) {
+    // 🔹 Normal updates
+    if (promptResponse !== undefined) {
       inquiry.promptResponse = promptResponse;
     }
 
@@ -106,13 +127,22 @@ export const updateInquiry = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: inquiry
+      data: inquiry,
     });
   } catch (error) {
     console.error(error);
+
+    // 🔹 Mongo unique index safeguard
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Prompt question already exists',
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
     });
   }
 };
@@ -123,8 +153,33 @@ export const updateInquiry = async (req, res) => {
 export const createInquiry = async (req, res) => {
   try {
     const { promptQuestion, promptResponse, isEnabled } = req.body;
+
+    if (!promptQuestion) {
+      return res.status(400).json({
+        success: false,
+        message: 'Prompt question is required',
+      });
+    }
+
+    // 🔹 Normalize / preprocess
     const preProcessedQuestion = preprocessText(promptQuestion);
-    const embedding = await createEmbedding(preprocessText(preProcessedQuestion, true));
+
+    // 🔹 Check uniqueness
+    const existing = await Inquiry.findOne({
+      promptQuestion: preProcessedQuestion,
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'Prompt question already exists',
+      });
+    }
+
+    // 🔹 Create embedding
+    const embedding = await createEmbedding(
+      preprocessText(preProcessedQuestion, true)
+    );
 
     const newInquiry = new Inquiry({
       promptQuestion: preProcessedQuestion,
@@ -137,13 +192,22 @@ export const createInquiry = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: newInquiry
+      data: newInquiry,
     });
   } catch (error) {
     console.error(error);
+
+    // 🔹 Handle Mongo unique constraint error
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Prompt question already exists',
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
     });
   }
 };
@@ -326,7 +390,7 @@ export const getAllInquiryRelevance = async (req, res) => {
     const entries = await InquiryRelevance.aggregate(pipeline);
 
     /* -----------------------------
-       Count total unique pairs
+    Count total unique pairs
     ----------------------------- */
     const totalAgg = await InquiryRelevance.aggregate([
       { $match: matchStage },
