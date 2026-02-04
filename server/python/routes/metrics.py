@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List
 import pandas as pd
@@ -8,19 +8,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import traceback
 
-app = FastAPI(title="Text Relevance Metrics API")
+router = APIRouter()
 
-# -----------------------------
-# Request schema
-# -----------------------------
 class DataItem(BaseModel):
     similarity_score: float
-    is_relevant: int  # <-- changed from bool to int (0 or 1)
+    is_relevant: int
 
 # -----------------------------
 # Core computation function
 # -----------------------------
-def compute_metrics(data: List[dict]) -> dict:
+def compute_metrics(data: List[dict]):
     try:
         if not data or len(data) < 2:
             return {
@@ -86,7 +83,12 @@ def compute_metrics(data: List[dict]) -> dict:
 # -----------------------------
 # API endpoint
 # -----------------------------
-@app.post("/compute-metrics")
+@router.post("/compute-metrics")
 def compute_metrics_api(payload: List[DataItem]):
     data = [item.dict() for item in payload]
     return compute_metrics(data)
+
+@router.post("/compute-metrics2")
+def compute_metrics_api2(payload: List[DataItem]):
+    # placeholder logic
+    return {"status": "success", "received": [item.dict() for item in payload]}

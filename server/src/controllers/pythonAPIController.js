@@ -25,7 +25,7 @@ export const fetchMetrics = async (req, res) => {
 
         // 3️⃣ Call Python FastAPI
         const response = await axios.post(
-            'http://127.0.0.1:8000/compute-metrics',
+            'http://127.0.0.1:8000/metrics/compute-metrics',
             payload,
             {
                 headers: { 'Content-Type': 'application/json' },
@@ -55,7 +55,7 @@ export const fetchMetrics = async (req, res) => {
         console.error('Metrics fetch error:', error.message);
 
         return res.status(500).json({
-            status: 'error',
+            status: error,
             metrics: {},
             message: 'Failed to fetch metrics',
         });

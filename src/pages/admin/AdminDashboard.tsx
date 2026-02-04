@@ -74,7 +74,9 @@ const AdminDashboard: React.FC = () => {
         >
           Admin Dashboard
         </motion.h1>
-        <p className="text-gray-600">Manage support tickets and customer issues</p>
+        <p className="text-gray-600">
+          Manage support tickets, monitor staff performance, and evaluate AI model metrics from this centralized dashboard.
+        </p>
       </div>
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">GPT-4 Model Evaluation Training Metrics</h2>
