@@ -1,7 +1,7 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import User from '../models/User.js';
-import { analyzeConversation, findRelevantInquiriesAI } from '../services/aiService.js';
+import { analyzeConversation } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
 
 // @desc    Start or continue a chat session
@@ -66,7 +66,6 @@ export const sendMessage = async (req, res) => {
     const analyzeResult = await analyzeConversation(chatHistory, message);
     if (analyzeResult === true) {
       aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
-
       chat.escalatedToTicket = true;
 
       const ticket = await Ticket.create({

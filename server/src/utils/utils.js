@@ -11,3 +11,6 @@ export const upload = multer({
         fileSize: 1 * 1024 * 1024, // 1MB hard limit (safety net)
     },
 });
+
+export const escapeRegex = (text) =>
+    text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

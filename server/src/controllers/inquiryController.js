@@ -1,10 +1,9 @@
 import Inquiry from '../models/Inquiry.js';
+import InquiryRelevance from '../models/InquiryRelevance.js';
 import { createEmbedding, preprocessText, generateInquiriesAI } from '../services/aiService.js';
 import { MAX_CHARS } from '../constants/constants.js';
-import csv from 'csv-parser';
 import textract from 'textract';
-import { Readable } from 'stream';
-
+import { escapeRegex } from '../utils/utils.js';
 // @desc    Get all inquiries with pagination & search
 // @route   GET /api/inquiry
 // @access  Private/Admin
@@ -16,11 +15,11 @@ export const getAllInquiry = async (req, res) => {
 
     const query = search
       ? {
-          $or: [
-            { promptQuestion: { $regex: search, $options: 'i' } },
-            { promptResponse: { $regex: search, $options: 'i' } },
-          ],
-        }
+        $or: [
+          { promptQuestion: { $regex: escapeRegex(search), $options: 'i' } },
+          { promptResponse: { $regex: escapeRegex(search), $options: 'i' } },
+        ],
+      }
       : {};
 
     const total = await Inquiry.countDocuments(query);
@@ -219,7 +218,7 @@ export const importInquiryFile = async (req, res) => {
       });
     }
 
-        // Generate AI-based inquiries
+    // Generate AI-based inquiries
     const count = req.body.count ? parseInt(req.body.count, 10) : 5; // default 5 inquiries
     const inquiries = await generateInquiriesAI(text, count);
 
@@ -255,6 +254,183 @@ export const importInquiryFile = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: message,
+    });
+  }
+};
+
+// ---------------- Inquiry Relevance Controllers ---------------- //
+
+// @desc    Get all inquiry relevance entries with pagination & search
+// @route   GET /api/inquiry-relevance
+// @access  Private/Admin
+export const getAllInquiryRelevance = async (req, res) => {
+  try {
+    let {
+      page = 1,
+      limit = 5,
+      search = '',
+      relevance = 'all',
+    } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    /* -----------------------------
+    Build match conditions
+    ----------------------------- */
+    const matchStage = {};
+
+    // 🔍 Search filter
+    if (search) {
+      matchStage.$or = [
+        { userInquiry: { $regex: escapeRegex(search), $options: 'i' } },
+        { generatedInquiry: { $regex: escapeRegex(search), $options: 'i' } },
+      ];
+    }
+
+    // ✅ Relevance filter
+    if (relevance === 'relevant') {
+      matchStage.isRelevant = 1;
+    } else if (relevance === 'not_relevant') {
+      matchStage.isRelevant = 0;
+    }
+
+    /* -----------------------------
+    Build main aggregation pipeline
+    ----------------------------- */
+    const pipeline = [
+      { $match: matchStage },
+
+      // 🔹 Group by unique inquiry pair
+      {
+        $group: {
+          _id: {
+            userInquiry: '$userInquiry',
+            generatedInquiry: '$generatedInquiry',
+          },
+          doc: { $first: '$$ROOT' }, // keep latest
+        },
+      },
+
+      // 🔹 Flatten
+      { $replaceRoot: { newRoot: '$doc' } },
+
+      // 🔹 Sort newest first
+      { $sort: { createdAt: -1 } },
+
+      // 🔹 Pagination
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+    ];
+
+    const entries = await InquiryRelevance.aggregate(pipeline);
+
+    /* -----------------------------
+       Count total unique pairs
+    ----------------------------- */
+    const totalAgg = await InquiryRelevance.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: {
+            userInquiry: '$userInquiry',
+            generatedInquiry: '$generatedInquiry',
+          },
+        },
+      },
+      { $count: 'total' },
+    ]);
+
+    const total = totalAgg[0]?.total || 0;
+
+    res.status(200).json({
+      success: true,
+      count: entries.length,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data: entries,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+}
+
+// @desc    Get inquiry relevance entry by ID
+// @route   GET /api/inquiry-relevance/:id
+// @access  Private/Admin
+export const getInquiryRelevanceById = async (req, res) => {
+  try {
+    const entry = await InquiryRelevance.findById(req.params.id);
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inquiry relevance entry not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: entry
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// @desc    Update inquiry relevance entry
+// @route   PUT /api/inquiry-relevance/:id
+// @access  Private/Admin
+export const updateInquiryRelevance = async (req, res) => {
+  try {
+    const entry = await InquiryRelevance.findById(req.params.id);
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inquiry relevance entry not found',
+      });
+    }
+
+    const { isRelevant } = req.body;
+
+    if (isRelevant === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'isRelevant is required',
+      });
+    }
+
+    // 🔹 Update ALL records with same inquiry pair
+    const result = await InquiryRelevance.updateMany(
+      {
+        userInquiry: entry.userInquiry,
+        generatedInquiry: entry.generatedInquiry,
+      },
+      {
+        $set: { isRelevant },
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      updatedCount: result.modifiedCount,
+      message: 'Relevance updated for all matching inquiries',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
     });
   }
 };

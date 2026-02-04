@@ -126,3 +126,7 @@ export const FILLER_PHRASES = [
     "honestly",
     "generally"
 ];
+
+export const ESCALATION_NEEDED_MSG = "Escalation needed";
+export const ESCALATION_NEEDED_RESPONSE = "Conversation requires escalation to human agent.";
+export const RESPOND_TO_ESCALATION_MSG = "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket."

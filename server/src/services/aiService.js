@@ -1,7 +1,8 @@
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
 import { detectEnglishLanguage } from "../utils/utils.js";
-import { FILLER_PHRASES } from "../constants/constants.js";
+import { FILLER_PHRASES, RESPOND_TO_ESCALATION_MSG, ESCALATION_NEEDED_MSG, ESCALATION_NEEDED_RESPONSE } from "../constants/constants.js";
+import InquiryRelevance from "../models/InquiryRelevance.js";
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -28,7 +29,7 @@ const escalationTriggers = [
  * @param {String} latestMessage - Latest AI-generated message
  * @returns {Boolean|String} - true if escalation needed, else AI response
  */
-export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true) {
+export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true, startResponseTime = Date.now()) {
   try {
     const prompt = `
       You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
@@ -61,6 +62,15 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
 
     // Normalize response and return boolean
     if (aiDecision.trim().toUpperCase() === "YES") {
+      const responseTime = Date.now() - startResponseTime;
+        await InquiryRelevance.create({
+        userInquiry: latestMessage,
+        generatedInquiry: ESCALATION_NEEDED_MSG,
+        generatedResponse: ESCALATION_NEEDED_RESPONSE,
+        similarityScore: 1,
+        responsTime: responseTime,
+        isRelevant: 1
+        });
       return true;
     } else {
       // if (getRuleBasedResponse(latestMessage)) {
@@ -69,12 +79,32 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
 
       // From custom inquiries AI training model
       const relevantInquiries = await findRelevantInquiriesAI(latestMessage);
-      if (relevantInquiries.length > 0) {
-        return relevantInquiries[0].promptResponse;
+      if (relevantInquiries.length > 0 && relevantInquiries[0].score >= 0.5) {
+        const responseTime = Date.now() - startResponseTime;
+        await InquiryRelevance.create({
+          userInquiry: latestMessage,
+          generatedInquiry: relevantInquiries[0].inquiry.promptQuestion,
+          generatedResponse: relevantInquiries[0].inquiry.promptResponse,
+          similarityScore: relevantInquiries[0].score,
+          responsTime: responseTime,
+          isRelevant: 1
+        });
+
+        return relevantInquiries[0].inquiry.promptResponse;
       }
 
       if (isRespondToEscalation) {
-        return "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket.";
+        const responseTime = Date.now() - startResponseTime;
+        await InquiryRelevance.create({
+          userInquiry: latestMessage,
+          generatedInquiry: ESCALATION_NEEDED_MSG,
+          generatedResponse: RESPOND_TO_ESCALATION_MSG,
+          similarityScore: relevantInquiries.length > 0 ? relevantInquiries[0].score : 0,
+          responsTime: responseTime,
+          isRelevant: 0
+        });
+
+        return RESPOND_TO_ESCALATION_MSG;
       }
 
       return aiDecision; // return the AI's response if no escalation needed
@@ -307,11 +337,11 @@ export async function findRelevantInquiriesAI(userQuestion) {
     return { inquiry, score };
   }));
 
+  console.log("Relevant Inquiries Scores:", scored.sort((a, b) => b.score - a.score)[0]);
+
   return scored
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .filter(item => item.score > 0.75) // threshold
-    .map(item => item.inquiry);
+    .slice(0, 1); // return top 1
 }
 
 /**
@@ -365,7 +395,6 @@ export async function detectAndTranslateToEnglish(text) {
     });
 
     const translatedText = response.choices[0].message.content.trim();
-    console.log("Translated Text:", translatedText);
     return translatedText;
   } catch (error) {
     console.error("OpenAI translation error:", error);

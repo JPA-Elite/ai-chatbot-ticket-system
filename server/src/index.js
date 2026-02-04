@@ -14,6 +14,7 @@ import chatRoutes from './routes/chat.js';
 import ticketRoutes from './routes/ticket.js';
 import staffRoutes from './routes/staff.js';
 import inquiryRoutes from './routes/inquiry.js';
+import inquiryRelevanceRoutes from './routes/inquiryRelevance.js';
 
 // Load environment variables
 dotenv.config();
@@ -53,6 +54,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/inquiry', inquiryRoutes);
+app.use('/api/inquiry-relevance', inquiryRelevanceRoutes);
 
 // Root route
 app.get('/', (req, res) => {

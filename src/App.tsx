@@ -25,6 +25,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
 import { TicketProvider } from './context/TicketContext';
 import InquiryDashboard from './pages/admin/InquiryDashboard';
+import InquiryRelevanceDashboard from './pages/admin/InquiryRelevanceDashboard';
 
 function App() {
   return (
@@ -82,6 +83,11 @@ function App() {
                   <Route path="/admin/inquiry" element={
                     <AdminRoute>
                       <InquiryDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/inquiry-relevance" element={
+                    <AdminRoute>
+                      <InquiryRelevanceDashboard />
                     </AdminRoute>
                   } />
                   <Route path="/admin/tickets/:id" element={
