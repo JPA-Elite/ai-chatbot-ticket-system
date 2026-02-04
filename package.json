@@ -8,8 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "server:python": "cd server/python && run-server.bat",
     "server": "cd server && npm run dev",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server\""
+    "dev:all": "concurrently \"npm run server:python\" \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
     "axios": "^1.6.7",
