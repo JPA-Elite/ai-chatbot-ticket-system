@@ -23,3 +23,19 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+.eggs/
+lib/
+build/
+develop-eggs/
+pip-wheel-metadata/
+__pypackages__/
+*.manifest
+*.spec
+*.pyc
+server/python/*.pyc
