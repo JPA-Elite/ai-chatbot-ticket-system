@@ -126,38 +126,6 @@ export const sendMessage = async (req, res) => {
     const normalize = (s = "") =>
       String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
-    const hasTicketGuidanceIntent = (text = "") => {
-      const msg = normalize(text);
-
-      const staffRoutingPhrases = [
-        "assistance for your staff",
-        "assist me for the staff",
-        "help me with your staff",
-        "talk to staff",
-        "speak to staff",
-        "connect me to staff",
-        "who are your staff",
-        "staff members"
-      ];
-
-      const asksTicketAction =
-        (msg.includes("file") || msg.includes("create") || msg.includes("open") || msg.includes("submit"))
-        && msg.includes("ticket");
-
-      const asksTicketHowTo =
-        (msg.includes("how") || msg.includes("guide") || msg.includes("steps") || msg.includes("process"))
-        && msg.includes("ticket");
-
-      const asksEscalation =
-        msg.includes("escalat")
-        || msg.includes("human agent")
-        || msg.includes("support staff")
-        || staffRoutingPhrases.some(phrase => msg.includes(phrase))
-        || (msg.includes("staff") && (msg.includes("assist") || msg.includes("assistance") || msg.includes("help")));
-
-      return asksTicketAction || asksTicketHowTo || asksEscalation;
-    };
-
     const scoreTag = (tag, text) => {
       const t = normalize(tag);
       if (!t) return 0;
@@ -194,9 +162,8 @@ export const sendMessage = async (req, res) => {
     }).select("_id name email tags role");
 
     const analyzeResult = await analyzeConversation(chatHistory, message);
-    const shouldOfferStaffSelection = hasTicketGuidanceIntent(message);
 
-    if (analyzeResult === true || shouldOfferStaffSelection) {
+    if (analyzeResult === true) {
       const studentText = normalize(message);
       const staffList = await getActiveStaffWithTags();
       const best = findBestStaffMatch(staffList, studentText);
