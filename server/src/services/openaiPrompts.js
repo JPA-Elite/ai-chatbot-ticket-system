@@ -14,6 +14,7 @@ Escalation is REQUIRED if the user:
 - reports bugs, errors, billing, payment, or account issues
 - explicitly requests escalation or human assistance
 - asks like 'help me file a ticket, create a ticket, open a ticket, submit a ticket, etc.'
+- asking for random help, need to ask, etc.
 
 Return ONLY:
 YES
