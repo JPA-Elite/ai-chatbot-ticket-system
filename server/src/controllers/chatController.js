@@ -123,34 +123,41 @@ export const sendMessage = async (req, res) => {
     let escalated = false;
     let ticketId = null;
 
-    const analyzeResult = await analyzeConversation(chatHistory, message);
-    if (analyzeResult === true) {
-      const normalize = (s = "") =>
-        String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const normalize = (s = "") =>
+      String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
-      const studentText = normalize(message);
+    const hasTicketGuidanceIntent = (text = "") => {
+      const msg = normalize(text);
 
-      const staffList = await User.find({
-        role: { $in: ["staff", "admin"] },
-        isActive: true,
-        tags: { $exists: true, $ne: [] },
-      }).select("_id name email tags role");
+      const asksTicketAction =
+        (msg.includes("file") || msg.includes("create") || msg.includes("open") || msg.includes("submit"))
+        && msg.includes("ticket");
 
-      const scoreTag = (tag, text) => {
-        const t = normalize(tag);
-        if (!t) return 0;
+      const asksTicketHowTo =
+        (msg.includes("how") || msg.includes("guide") || msg.includes("steps") || msg.includes("process"))
+        && msg.includes("ticket");
 
-        const words = t.split(" ").filter(Boolean);
-        let score = 0;
+      const asksEscalation = msg.includes("escalat") || msg.includes("human agent") || msg.includes("support staff");
 
-        for (const w of words) {
-          if (w.length >= 3 && text.includes(w)) score += 1;
-        }
+      return asksTicketAction || asksTicketHowTo || asksEscalation;
+    };
 
-        if (text.includes(t)) score += 3;
-        return score;
-      };
+    const scoreTag = (tag, text) => {
+      const t = normalize(tag);
+      if (!t) return 0;
 
+      const words = t.split(" ").filter(Boolean);
+      let score = 0;
+
+      for (const w of words) {
+        if (w.length >= 3 && text.includes(w)) score += 1;
+      }
+
+      if (text.includes(t)) score += 3;
+      return score;
+    };
+
+    const findBestStaffMatch = (staffList = [], studentText = "") => {
       let best = { staff: null, tag: "", score: 0 };
 
       for (const staff of staffList) {
@@ -160,6 +167,23 @@ export const sendMessage = async (req, res) => {
           if (s > best.score) best = { staff, tag, score: s };
         }
       }
+
+      return best;
+    };
+
+    const getActiveStaffWithTags = async () => User.find({
+      role: { $in: ["staff", "admin"] },
+      isActive: true,
+      tags: { $exists: true, $ne: [] },
+    }).select("_id name email tags role");
+
+    const analyzeResult = await analyzeConversation(chatHistory, message);
+    const shouldOfferStaffSelection = hasTicketGuidanceIntent(message);
+
+    if (analyzeResult === true || shouldOfferStaffSelection) {
+      const studentText = normalize(message);
+      const staffList = await getActiveStaffWithTags();
+      const best = findBestStaffMatch(staffList, studentText);
 
       if (!best.staff || best.score === 0) {
         aiResponse = formatStaffSelectionMessage(staffList);
@@ -195,11 +219,11 @@ AI Response: ${aiResponse}`,
 
           if (student) {
             if (matchedStaffEmail) {
-              console.log('Sending ticket created email to matched staff:', matchedStaffEmail);
               await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+              console.log(`Ticket created and notification sent to assigned staff: ${matchedStaffEmail}`);
             } else {
-              console.log('No matched staff email found, sending to all relevant staff.');
               await sendTicketCreatedToStaff(ticket, student.name, student.email);
+              console.log('Ticket created but no specific staff assigned, notification sent to general staff inbox');
             }
           }
         } catch (emailError) {
@@ -210,7 +234,7 @@ AI Response: ${aiResponse}`,
       aiResponse = analyzeResult;
     }
 
-    aiResponse = await matchResponseLanguage(message, aiResponse);
+    // aiResponse = await matchResponseLanguage(message, aiResponse);
 
     chat.messages.push({
       role: 'assistant',
