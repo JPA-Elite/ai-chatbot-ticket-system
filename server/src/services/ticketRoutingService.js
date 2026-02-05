@@ -1,44 +1,17 @@
 import User from '../models/User.js';
+import {
+  DEFAULT_ROUTING_DEPARTMENTS,
+  DEPARTMENT_MAPPING,
+  PRIORITY_ROUTING,
+  STAFF_ROLES,
+  TICKET_ACTIVE_STATUSES
+} from '../constants/constants.js';
 import { classifyTicket } from './aiService.js';
 
 /**
  * AI-powered ticket routing service
  * Routes tickets to appropriate staff based on content analysis
  */
-
-// Department mapping for different ticket categories
-const DEPARTMENT_MAPPING = {
-  'technical': ['technical', 'support'],
-  'billing': ['billing', 'support'],
-  'account': ['support', 'admissions'],
-  'feature': ['technical', 'support'],
-  'bug': ['technical'],
-  'other': ['support']
-};
-
-// Priority-based routing rules
-const PRIORITY_ROUTING = {
-  'urgent': { 
-    preferSenior: true, 
-    maxActiveTickets: 3,
-    departments: ['support', 'technical', 'billing', 'admissions']
-  },
-  'high': { 
-    preferSenior: false, 
-    maxActiveTickets: 5,
-    departments: ['support', 'technical', 'billing', 'admissions']
-  },
-  'medium': { 
-    preferSenior: false, 
-    maxActiveTickets: 8,
-    departments: ['support', 'technical', 'billing', 'admissions']
-  },
-  'low': { 
-    preferSenior: false, 
-    maxActiveTickets: 10,
-    departments: ['support', 'technical', 'billing', 'admissions']
-  }
-};
 
 /**
  * Get staff workload (number of active tickets)
@@ -48,7 +21,7 @@ const getStaffWorkload = async (staffId) => {
   
   const activeTickets = await Ticket.countDocuments({
     assignedTo: staffId,
-    status: { $in: ['open', 'in-progress'] }
+    status: { $in: TICKET_ACTIVE_STATUSES }
   });
   
   return activeTickets;
@@ -61,7 +34,7 @@ const calculateStaffScore = async (staff, category, priority, description) => {
   let score = 0;
   
   // Department match score (40% weight)
-  const relevantDepartments = DEPARTMENT_MAPPING[category] || ['support'];
+  const relevantDepartments = DEPARTMENT_MAPPING[category] || DEFAULT_ROUTING_DEPARTMENTS;
   if (relevantDepartments.includes(staff.department)) {
     score += 40;
   }
@@ -100,7 +73,7 @@ export const findBestStaffForTicket = async (category, priority, description, ex
   try {
     // Get all active staff members
     const availableStaff = await User.find({
-      role: { $in: ['staff', 'admin'] },
+      role: { $in: STAFF_ROLES },
       isActive: { $ne: false },
       _id: { $nin: excludeStaffIds }
     });
@@ -252,7 +225,7 @@ export const getRoutingSuggestions = async (ticketId) => {
 
     // Get all available staff
     const availableStaff = await User.find({
-      role: { $in: ['staff', 'admin'] },
+      role: { $in: STAFF_ROLES },
       isActive: { $ne: false }
     });
 
