@@ -126,29 +126,52 @@ export const sendMessage = async (req, res) => {
     const normalize = (s = "") =>
       String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
+    const STOP_WORDS = new Set([
+      "the", "and", "for", "with", "from", "that", "this", "your", "you",
+      "our", "are", "can", "help", "please", "about", "would", "like", "need",
+      "assist", "assistance", "staff", "ticket", "support", "how", "what"
+    ]);
+
     const scoreTag = (tag, text) => {
       const t = normalize(tag);
-      if (!t) return 0;
+      if (!t) return { score: 0, hasMeaningfulMatch: false };
 
       const words = t.split(" ").filter(Boolean);
       let score = 0;
+      let meaningfulMatches = 0;
 
       for (const w of words) {
-        if (w.length >= 3 && text.includes(w)) score += 1;
+        const isMeaningful = w.length >= 4 && !STOP_WORDS.has(w);
+        if (isMeaningful && text.includes(w)) {
+          score += 1;
+          meaningfulMatches += 1;
+        }
       }
 
-      if (text.includes(t)) score += 3;
-      return score;
+      const fullPhraseMatch = text.includes(t);
+      if (fullPhraseMatch) score += 3;
+
+      return {
+        score,
+        hasMeaningfulMatch: fullPhraseMatch || meaningfulMatches > 0
+      };
     };
 
     const findBestStaffMatch = (staffList = [], studentText = "") => {
-      let best = { staff: null, tag: "", score: 0 };
+      let best = { staff: null, tag: "", score: 0, hasMeaningfulMatch: false };
 
       for (const staff of staffList) {
         const tags = Array.isArray(staff.tags) ? staff.tags : [];
         for (const tag of tags) {
-          const s = scoreTag(tag, studentText);
-          if (s > best.score) best = { staff, tag, score: s };
+          const result = scoreTag(tag, studentText);
+          if (result.score > best.score) {
+            best = {
+              staff,
+              tag,
+              score: result.score,
+              hasMeaningfulMatch: result.hasMeaningfulMatch
+            };
+          }
         }
       }
 
@@ -168,7 +191,10 @@ export const sendMessage = async (req, res) => {
       const staffList = await getActiveStaffWithTags();
       const best = findBestStaffMatch(staffList, studentText);
 
-      if (!best.staff || best.score === 0) {
+      const assignmentIntent = /(assign|route|forward|endorse|please assign|please route)/i.test(message || "");
+      const shouldAutoCreateTicket = assignmentIntent || (best.staff && best.score >= 2 && best.hasMeaningfulMatch);
+
+      if (!shouldAutoCreateTicket) {
         aiResponse = formatStaffSelectionMessage(staffList);
       } else {
         aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
