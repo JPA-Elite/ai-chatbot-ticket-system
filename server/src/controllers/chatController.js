@@ -1,7 +1,7 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import User from '../models/User.js';
-import { analyzeConversation } from '../services/aiService.js';
+import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
 
 const pickBestTag = async (message) => {
@@ -24,6 +24,42 @@ const pickBestTag = async (message) => {
     .sort((a, b) => b.tag.length - a.tag.length);
 
   return matches.length ? matches[0].tag : 'General';
+};
+
+const formatStaffSelectionMessage = (staffList = []) => {
+  const uniqueStaff = [];
+  const seen = new Set();
+
+  for (const staff of staffList) {
+    const key = String(staff._id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    uniqueStaff.push({
+      name: staff.name || 'Unknown Staff',
+      role: staff.role || 'staff',
+      email: staff.email || 'No email',
+      concerns: (Array.isArray(staff.tags) ? staff.tags : []).filter(Boolean)
+    });
+  }
+
+  if (!uniqueStaff.length) {
+    return 'I can help you file a support ticket. Please tell me the specific concern (for example: Enrollment, Admission, TCG, Thesis, or AMIS concerns) so I can assign it to the right staff member.';
+  }
+
+  const lines = uniqueStaff.slice(0, 8).map((staff, index) => {
+    const concernPreview = staff.concerns.slice(0, 4).join(', ');
+    const concernText = concernPreview ? ` | concerns: ${concernPreview}` : '';
+    return `${index + 1}. ${staff.name} (${staff.role}) - ${staff.email}${concernText}`;
+  });
+
+  return [
+    'I can help you file a support ticket.',
+    'Please choose one of the following staff members and share your concern category so I can route your ticket correctly:',
+    ...lines,
+    '',
+    "Example reply: 'Please assign this to Karen C. De Vera for Student Records.'"
+  ].join('\n');
 };
 
 // @desc    Start or continue a chat session
@@ -84,38 +120,55 @@ export const sendMessage = async (req, res) => {
       }));
 
     let aiResponse = "";
+    let escalated = false;
+    let ticketId = null;
 
-    const analyzeResult = await analyzeConversation(chatHistory, message);
-    if (analyzeResult === true) {
-      aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
-      chat.escalatedToTicket = true;
+    const normalize = (s = "") =>
+      String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
-      const normalize = (s = "") =>
-        String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const hasTicketGuidanceIntent = (text = "") => {
+      const msg = normalize(text);
 
-      const studentText = normalize(message);
+      const asksTicketAction =
+        (msg.includes("file") || msg.includes("create") || msg.includes("open") || msg.includes("submit"))
+        && msg.includes("ticket");
 
-      const staffList = await User.find({
-        role: { $in: ["staff", "admin"] },
-        isActive: true,
-        tags: { $exists: true, $ne: [] },
-      }).select("_id name email tags");
+      const asksTicketHowTo =
+        (msg.includes("how") || msg.includes("guide") || msg.includes("steps") || msg.includes("process"))
+        && msg.includes("ticket");
 
-      const scoreTag = (tag, text) => {
-        const t = normalize(tag);
-        if (!t) return 0;
+      const asksEscalation = msg.includes("escalat") || msg.includes("human agent") || msg.includes("support staff");
 
-        const words = t.split(" ").filter(Boolean);
-        let score = 0;
+      const asksStaffAssistance =
+        msg.includes("your staff")
+        || msg.includes("the staff")
+        || msg.includes("talk with staff")
+        || msg.includes("talk to staff")
+        || msg.includes("staff assistance")
+        || msg.includes("assistance for your staff")
+        || msg.includes("who are the staff")
+        || msg.includes("who can i talk")
+        || (msg.includes("staff") && msg.includes("assist"));
 
-        for (const w of words) {
-          if (w.length >= 3 && text.includes(w)) score += 1;
-        }
+      return asksTicketAction || asksTicketHowTo || asksEscalation || asksStaffAssistance;
+    };
 
-        if (text.includes(t)) score += 3;
-        return score;
-      };
+    const scoreTag = (tag, text) => {
+      const t = normalize(tag);
+      if (!t) return 0;
 
+      const words = t.split(" ").filter(Boolean);
+      let score = 0;
+
+      for (const w of words) {
+        if (w.length >= 3 && text.includes(w)) score += 1;
+      }
+
+      if (text.includes(t)) score += 3;
+      return score;
+    };
+
+    const findBestStaffMatch = (staffList = [], studentText = "") => {
       let best = { staff: null, tag: "", score: 0 };
 
       for (const staff of staffList) {
@@ -126,43 +179,71 @@ export const sendMessage = async (req, res) => {
         }
       }
 
-      const assignedStaffId = best.staff ? best.staff._id : null;
-      const matchedTag = best.tag || "";
-      const ticket = await Ticket.create({
-        userId,
-        chatId: chat._id,
-        title: `${message.substring(0, 50)}...`,
-        description: `Chat escalated to ticket. User message: ${message}\n\nAI Response: ${aiResponse}`,
-        category: 'other',
-        priority: 'medium',
-        assignedTo: assignedStaffId,
-        tag: matchedTag,
-        status: 'pending'
-      });
+      return best;
+    };
 
-      chat.ticketId = ticket._id;
+    const getActiveStaffWithTags = async () => User.find({
+      role: { $in: ["staff", "admin"] },
+      isActive: true,
+      tags: { $exists: true, $ne: [] },
+    }).select("_id name email tags role");
 
-      try {
-        const student = await User.findById(userId).select('name email');
+    const analyzeResult = await analyzeConversation(chatHistory, message);
+    const shouldOfferStaffSelection = hasTicketGuidanceIntent(message);
 
-        const matchedStaffEmail =
-          ticket.assignedTo
-            ? (await User.findById(ticket.assignedTo).select('email'))?.email
-            : null;
+    if (analyzeResult === true || shouldOfferStaffSelection) {
+      const studentText = normalize(message);
+      const staffList = await getActiveStaffWithTags();
+      const best = findBestStaffMatch(staffList, studentText);
 
-        if (student) {
-          if (matchedStaffEmail) {
-            await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
-          } else {
-            await sendTicketCreatedToStaff(ticket, student.name, student.email);
+      if (analyzeResult !== true || !best.staff || best.score === 0) {
+        aiResponse = formatStaffSelectionMessage(staffList);
+      } else {
+        aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
+        chat.escalatedToTicket = true;
+        escalated = true;
+
+        const ticket = await Ticket.create({
+          userId,
+          chatId: chat._id,
+          title: `${message.substring(0, 50)}...`,
+          description: `Chat escalated to ticket. User message: ${message}
+
+AI Response: ${aiResponse}`,
+          category: 'other',
+          priority: 'medium',
+          assignedTo: best.staff._id,
+          tag: best.tag || "",
+          status: 'pending'
+        });
+
+        chat.ticketId = ticket._id;
+        ticketId = ticket._id;
+
+        try {
+          const student = await User.findById(userId).select('name email');
+
+          const matchedStaffEmail =
+            ticket.assignedTo
+              ? (await User.findById(ticket.assignedTo).select('email'))?.email
+              : null;
+
+          if (student) {
+            if (matchedStaffEmail) {
+              await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+            } else {
+              await sendTicketCreatedToStaff(ticket, student.name, student.email);
+            }
           }
+        } catch (emailError) {
+          console.error('Error sending ticket notification email:', emailError);
         }
-      } catch (emailError) {
-        console.error('Error sending ticket notification email:', emailError);
       }
     } else {
       aiResponse = analyzeResult;
     }
+
+    aiResponse = await matchResponseLanguage(message, aiResponse);
 
     chat.messages.push({
       role: 'assistant',
@@ -176,8 +257,8 @@ export const sendMessage = async (req, res) => {
       success: true,
       data: {
         chat,
-        escalated: analyzeResult === true,
-        ticketId: analyzeResult === true ? chat.ticketId : null
+        escalated,
+        ticketId
       }
     });
   } catch (error) {

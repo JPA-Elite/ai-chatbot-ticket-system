@@ -10,6 +10,13 @@ import {
   ESCALATION_NEEDED_RESPONSE
 } from "../constants/constants.js";
 import InquiryRelevance from "../models/InquiryRelevance.js";
+import {
+  buildCanonicalizeQuestionMessages,
+  buildEscalationDecisionMessages,
+  buildInquiryGenerationMessages,
+  buildResponseLanguageMatchMessages,
+  buildTranslationMessages
+} from "./openaiPrompts.js";
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -30,6 +37,29 @@ const escalationTriggers = [
   "not working", "broken", "complex", "advanced", "specialist", "urgent"
 ];
 
+function isGreetingOnlyMessage(message = "") {
+  const normalized = String(message)
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return false;
+
+  const words = normalized.split(" ");
+  if (words.length > 6) return false;
+
+  for (let i = words.length; i > 0; i -= 1) {
+    const phrase = words.slice(0, i).join(" ");
+    if (GREETING_KEYWORDS.includes(phrase)) {
+      const remainder = words.slice(i);
+      return remainder.length === 0 || isGreetingOnlyMessage(remainder.join(" "));
+    }
+  }
+
+  return false;
+}
+
 /**
  * Analyze conversation for escalation using AI
  * @param {Array} chatHistory - Full conversation history
@@ -38,42 +68,24 @@ const escalationTriggers = [
  */
 export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true, startResponseTime = Date.now()) {
   try {
-    const msg = String(latestMessage || "").toLowerCase().trim();
+    const rawMessage = String(latestMessage || "").toLowerCase().trim();
+    const isGreetingOnlyRaw = rawMessage.length <= 40 && isGreetingOnlyMessage(rawMessage);
 
-    const isGreetingOnly =
-      msg.length <= 40 &&
-      GREETING_KEYWORDS.some(k => msg === k || msg.startsWith(k + " ") || msg.startsWith(k + "!") || msg.startsWith(k + "."));
-
-    if (isGreetingOnly) {
+    if (isGreetingOnlyRaw) {
       return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
     }
 
-    const prompt = `
-      You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
-      Return ONLY "YES" if escalation is needed, if not return a response.
+    const translatedMessage = await detectAndTranslateToEnglish(latestMessage);
+    const msg = String(translatedMessage || "").toLowerCase().trim();
+    const isGreetingOnlyTranslated = msg.length <= 40 && isGreetingOnlyMessage(msg);
 
-      Conversation:
-      ${chatHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}`;
+    if (isGreetingOnlyTranslated) {
+      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    }
 
-    const aiDecision = await generateChatResponse([
-      { role: "system", content: `
-        You are an AI that decides if a conversation requires human escalation.
-
-        Escalation is REQUIRED if the user:
-        - asks for a real person, human agent, or technical support staff
-        - asks for live support
-        - asks for help beyond AI capability
-        - reports bugs, errors, billing, payment, or account issues
-        - explicitly requests escalation or human assistance
-        - asks like 'help me file a ticket, create a ticket, open a ticket, submit a ticket, etc.'
-
-        Return ONLY:
-        YES
-        or
-        response to the user if escalation is NOT needed.`
-    },
-      { role: "user", content: prompt }
-    ]);
+    const aiDecision = await generateChatResponse(
+      buildEscalationDecisionMessages(chatHistory)
+    );
 
     console.log("AI Escalation Decision:", aiDecision);
 
@@ -241,7 +253,7 @@ export function getRuleBasedResponse(message) {
   const msg = message.toLowerCase().trim();
 
   // Greeting detector
-  if (GREETING_KEYWORDS.some(k => msg === k || msg.startsWith(k))) {
+  if (isGreetingOnlyMessage(msg)) {
     return GREETING_RESPONSES[
       Math.floor(Math.random() * GREETING_RESPONSES.length)
     ];
@@ -413,22 +425,9 @@ export async function detectAndTranslateToEnglish(text) {
   }
 
   try {
-    const prompt = `
-      You are an AI translator.
-      Detect the language of the following text.
-      If it is not in English, translate it into English.
-      Respond ONLY with the English version.
-
-      Text:
-      "${text}"
-    `;
-
     const response = await openai.chat.completions.create({
       model: process.env.CHATGPT_MODEL,
-      messages: [
-        { role: "system", content: "You are a translation assistant." },
-        { role: "user", content: prompt }
-      ],
+      messages: buildTranslationMessages(text),
       temperature: 0
     });
 
@@ -437,6 +436,35 @@ export async function detectAndTranslateToEnglish(text) {
   } catch (error) {
     console.error("OpenAI translation error:", error);
     return text; // fallback to original text
+  }
+}
+
+/**
+ * Rewrite assistant response to match the user's language
+ * @param {string} userMessage - Latest user message
+ * @param {string} assistantResponse - Generated assistant response
+ * @returns {Promise<string>} - Language-matched response
+ */
+export async function matchResponseLanguage(userMessage, assistantResponse) {
+  if (!assistantResponse) {
+    return assistantResponse;
+  }
+
+  if (detectEnglishLanguage(String(userMessage || ""))) {
+    return assistantResponse;
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: process.env.CHATGPT_MODEL,
+      messages: buildResponseLanguageMatchMessages(userMessage, assistantResponse),
+      temperature: 0
+    });
+
+    return response.choices[0].message.content.trim() || assistantResponse;
+  } catch (error) {
+    console.error("OpenAI response language match error:", error);
+    return assistantResponse;
   }
 }
 
@@ -450,43 +478,9 @@ export async function detectAndTranslateToEnglish(text) {
  */
 export async function generateInquiriesAI(content, count = 1) {
   try {
-    const prompt = `
-      You are an AI that generates inquiry questions and answers from the content provided.
-
-      INSTRUCTIONS:
-      1. First, detect if the content is already in Q&A format.
-         - If it is, return ALL existing Q&A exactly as-is in JSON format.
-         - Ignore the requested count in this case.
-      2. If the content is NOT in Q&A format:
-         - Generate exactly ${count} inquiries that are UNIQUE, student-level, easy to understand, and human-like.
-         - Only generate questions that can be answered using the text provided below.
-         - Do NOT invent information or add anything not present in the content.
-         - Answers must be extracted directly from the content, paraphrased if needed for readability.
-         - Focus only on questions a student would naturally ask after reading the content.
-         - If it is impossible to generate the requested number of inquiries (content is too short, trivial, or numeric), return an empty JSON array: []
-
-      IMPORTANT:
-      - Do not repeat questions or answers.
-      - Return ONLY a JSON array in this exact format:
-
-      [
-        {
-          "question": "....",
-          "answer": "...."
-        },
-        ...
-      ]
-
-      Content:
-      """${content}"""
-    `;
-
     const response = await openai.chat.completions.create({
       model: process.env.CHATGPT_MODEL,
-      messages: [
-        { role: "system", content: "You are an AI assistant that creates student-level, human-like inquiry questions and answers, strictly based on the content. Follow all instructions carefully." },
-        { role: "user", content: prompt }
-      ],
+      messages: buildInquiryGenerationMessages(content, count),
       temperature: 0
     });
 
@@ -510,23 +504,7 @@ export async function canonicalizeQuestion(question) {
   const response = await openai.chat.completions.create({
     model: process.env.CHATGPT_MODEL,
     temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: "You normalize questions into a single canonical English form."
-      },
-      {
-        role: "user",
-        content: `
-          Rewrite this question into its simplest, neutral form.
-          Remove location fluff, politeness, and synonyms.
-          Respond with ONE sentence only.
-
-          Question:
-          "${question}"
-        `
-      }
-    ]
+    messages: buildCanonicalizeQuestionMessages(question)
   });
 
   return response.choices[0].message.content.trim().toLowerCase();
