@@ -1,7 +1,7 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import User from '../models/User.js';
-import { analyzeConversation } from '../services/aiService.js';
+import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
 
 const pickBestTag = async (message) => {
@@ -24,6 +24,42 @@ const pickBestTag = async (message) => {
     .sort((a, b) => b.tag.length - a.tag.length);
 
   return matches.length ? matches[0].tag : 'General';
+};
+
+const formatStaffSelectionMessage = (staffList = []) => {
+  const uniqueStaff = [];
+  const seen = new Set();
+
+  for (const staff of staffList) {
+    const key = String(staff._id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    uniqueStaff.push({
+      name: staff.name || 'Unknown Staff',
+      role: staff.role || 'staff',
+      email: staff.email || 'No email',
+      concerns: (Array.isArray(staff.tags) ? staff.tags : []).filter(Boolean)
+    });
+  }
+
+  if (!uniqueStaff.length) {
+    return 'I can help you file a support ticket. Please tell me the specific concern (for example: Enrollment, Admission, TCG, Thesis, or AMIS concerns) so I can assign it to the right staff member.';
+  }
+
+  const lines = uniqueStaff.slice(0, 8).map((staff, index) => {
+    const concernPreview = staff.concerns.slice(0, 4).join(', ');
+    const concernText = concernPreview ? ` | concerns: ${concernPreview}` : '';
+    return `${index + 1}. ${staff.name} (${staff.role}) - ${staff.email}${concernText}`;
+  });
+
+  return [
+    'I can help you file a support ticket.',
+    'Please choose one of the following staff members and share your concern category so I can route your ticket correctly:',
+    ...lines,
+    '',
+    "Example reply: 'Please assign this to Karen C. De Vera for Student Records.'"
+  ].join('\n');
 };
 
 // @desc    Start or continue a chat session
@@ -84,12 +120,11 @@ export const sendMessage = async (req, res) => {
       }));
 
     let aiResponse = "";
+    let escalated = false;
+    let ticketId = null;
 
     const analyzeResult = await analyzeConversation(chatHistory, message);
     if (analyzeResult === true) {
-      aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
-      chat.escalatedToTicket = true;
-
       const normalize = (s = "") =>
         String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
@@ -99,7 +134,7 @@ export const sendMessage = async (req, res) => {
         role: { $in: ["staff", "admin"] },
         isActive: true,
         tags: { $exists: true, $ne: [] },
-      }).select("_id name email tags");
+      }).select("_id name email tags role");
 
       const scoreTag = (tag, text) => {
         const t = normalize(tag);
@@ -126,43 +161,54 @@ export const sendMessage = async (req, res) => {
         }
       }
 
-      const assignedStaffId = best.staff ? best.staff._id : null;
-      const matchedTag = best.tag || "";
-      const ticket = await Ticket.create({
-        userId,
-        chatId: chat._id,
-        title: `${message.substring(0, 50)}...`,
-        description: `Chat escalated to ticket. User message: ${message}\n\nAI Response: ${aiResponse}`,
-        category: 'other',
-        priority: 'medium',
-        assignedTo: assignedStaffId,
-        tag: matchedTag,
-        status: 'pending'
-      });
+      if (!best.staff || best.score === 0) {
+        aiResponse = formatStaffSelectionMessage(staffList);
+      } else {
+        aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
+        chat.escalatedToTicket = true;
+        escalated = true;
 
-      chat.ticketId = ticket._id;
+        const ticket = await Ticket.create({
+          userId,
+          chatId: chat._id,
+          title: `${message.substring(0, 50)}...`,
+          description: `Chat escalated to ticket. User message: ${message}
 
-      try {
-        const student = await User.findById(userId).select('name email');
+AI Response: ${aiResponse}`,
+          category: 'other',
+          priority: 'medium',
+          assignedTo: best.staff._id,
+          tag: best.tag || "",
+          status: 'pending'
+        });
 
-        const matchedStaffEmail =
-          ticket.assignedTo
-            ? (await User.findById(ticket.assignedTo).select('email'))?.email
-            : null;
+        chat.ticketId = ticket._id;
+        ticketId = ticket._id;
 
-        if (student) {
-          if (matchedStaffEmail) {
-            await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
-          } else {
-            await sendTicketCreatedToStaff(ticket, student.name, student.email);
+        try {
+          const student = await User.findById(userId).select('name email');
+
+          const matchedStaffEmail =
+            ticket.assignedTo
+              ? (await User.findById(ticket.assignedTo).select('email'))?.email
+              : null;
+
+          if (student) {
+            if (matchedStaffEmail) {
+              await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+            } else {
+              await sendTicketCreatedToStaff(ticket, student.name, student.email);
+            }
           }
+        } catch (emailError) {
+          console.error('Error sending ticket notification email:', emailError);
         }
-      } catch (emailError) {
-        console.error('Error sending ticket notification email:', emailError);
       }
     } else {
       aiResponse = analyzeResult;
     }
+
+    aiResponse = await matchResponseLanguage(message, aiResponse);
 
     chat.messages.push({
       role: 'assistant',
@@ -176,8 +222,8 @@ export const sendMessage = async (req, res) => {
       success: true,
       data: {
         chat,
-        escalated: analyzeResult === true,
-        ticketId: analyzeResult === true ? chat.ticketId : null
+        escalated,
+        ticketId
       }
     });
   } catch (error) {
