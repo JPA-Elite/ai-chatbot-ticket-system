@@ -61,11 +61,18 @@ function isGreetingOnlyMessage(message = "") {
  */
 export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true, startResponseTime = Date.now()) {
   try {
-    const msg = String(latestMessage || "").toLowerCase().trim();
+    const rawMessage = String(latestMessage || "").toLowerCase().trim();
+    const isGreetingOnlyRaw = rawMessage.length <= 40 && isGreetingOnlyMessage(rawMessage);
 
-    const isGreetingOnly = msg.length <= 40 && isGreetingOnlyMessage(msg);
+    if (isGreetingOnlyRaw) {
+      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    }
 
-    if (isGreetingOnly) {
+    const translatedMessage = await detectAndTranslateToEnglish(latestMessage);
+    const msg = String(translatedMessage || "").toLowerCase().trim();
+    const isGreetingOnlyTranslated = msg.length <= 40 && isGreetingOnlyMessage(msg);
+
+    if (isGreetingOnlyTranslated) {
       return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
     }
 
