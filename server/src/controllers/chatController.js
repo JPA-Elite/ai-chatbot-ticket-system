@@ -234,7 +234,7 @@ AI Response: ${aiResponse}`,
       aiResponse = analyzeResult;
     }
 
-    aiResponse = await matchResponseLanguage(message, aiResponse);
+    // aiResponse = await matchResponseLanguage(message, aiResponse);
 
     chat.messages.push({
       role: 'assistant',
