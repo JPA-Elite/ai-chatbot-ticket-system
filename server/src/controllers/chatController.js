@@ -4,6 +4,28 @@ import User from '../models/User.js';
 import { analyzeConversation } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
 
+const pickBestTag = async (message) => {
+  const m = String(message || '').toLowerCase();
+
+  const staff = await User.find({
+    role: { $in: ['admin', 'staff'] },
+    tags: { $exists: true, $ne: [] }
+  }).select('tags');
+
+  const all = staff
+    .flatMap(s => (s.tags || []))
+    .map(t => String(t).trim())
+    .filter(Boolean);
+
+  const unique = Array.from(new Set(all));
+  const matches = unique
+    .map(t => ({ tag: t, hit: m.includes(t.toLowerCase()) }))
+    .filter(x => x.hit)
+    .sort((a, b) => b.tag.length - a.tag.length);
+
+  return matches.length ? matches[0].tag : 'General';
+};
+
 // @desc    Start or continue a chat session
 // @route   POST /api/chat/message
 // @access  Private

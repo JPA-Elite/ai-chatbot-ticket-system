@@ -42,11 +42,6 @@ const UserSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
-    tags: {
-    type: [String],
-    default: []
-  },
-
   stats: {
     totalTickets: {
       type: Number,

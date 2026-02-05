@@ -13,9 +13,26 @@ export const getAllTickets = async (req, res) => {
     const startIndex = (page - 1) * limit;
 
     // Filter by status if provided
-    const filter = {};
+    let filter = {};
     if (req.query.status) {
       filter.status = req.query.status;
+    }
+
+    if (req.user.role === 'staff') {
+      const me = await (await import('../models/User.js')).default.findById(req.user.id).select('tags');
+      const myTags = (me?.tags || []).map(t => String(t).trim()).filter(Boolean);
+
+      const tagFilter = myTags.length
+        ? { $in: myTags }
+        : { $in: [] };
+
+      filter = {
+        ...filter,
+        $or: [
+          { assignedTo: req.user.id },
+          { assignedTo: null, tag: tagFilter }
+        ]
+      };
     }
 
     const tickets = await Ticket.find(filter)
@@ -300,6 +317,22 @@ export const acceptTicket = async (req, res) => {
         success: false,
         message: 'This ticket has already been accepted by another staff member'
       });
+    }
+
+    if (req.user.role === 'staff') {
+      const User = (await import('../models/User.js')).default;
+      const me = await User.findById(req.user.id).select('tags');
+      const myTags = (me?.tags || []).map(t => String(t).trim());
+
+      const ticketTag = String(ticket.tag || '').trim();
+      const allowed = ticketTag && myTags.includes(ticketTag);
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to accept this ticket (tag not assigned to your account)'
+        });
+      }
     }
 
     ticket.status = 'accepted';
