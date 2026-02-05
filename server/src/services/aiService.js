@@ -1,7 +1,14 @@
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
 import { detectEnglishLanguage } from "../utils/utils.js";
-import { FILLER_PHRASES, RESPOND_TO_ESCALATION_MSG, ESCALATION_NEEDED_MSG, ESCALATION_NEEDED_RESPONSE } from "../constants/constants.js";
+import {
+  FILLER_PHRASES,
+  GREETING_KEYWORDS,
+  GREETING_RESPONSES,
+  RESPOND_TO_ESCALATION_MSG,
+  ESCALATION_NEEDED_MSG,
+  ESCALATION_NEEDED_RESPONSE
+} from "../constants/constants.js";
 import InquiryRelevance from "../models/InquiryRelevance.js";
 
 // Mock AI Service for testing without OpenAI API key
@@ -31,6 +38,16 @@ const escalationTriggers = [
  */
 export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true, startResponseTime = Date.now()) {
   try {
+    const msg = String(latestMessage || "").toLowerCase().trim();
+
+    const isGreetingOnly =
+      msg.length <= 40 &&
+      GREETING_KEYWORDS.some(k => msg === k || msg.startsWith(k + " ") || msg.startsWith(k + "!") || msg.startsWith(k + "."));
+
+    if (isGreetingOnly) {
+      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    }
+
     const prompt = `
       You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
       Return ONLY "YES" if escalation is needed, if not return a response.
@@ -219,6 +236,27 @@ export const generateMockResponse = (userMessage, chatHistory = []) => {
  * @returns {String|null} - Response or null if no match
  */
 export function getRuleBasedResponse(message) {
+  if (!message) return null;
+
+  const msg = message.toLowerCase().trim();
+
+  // Greeting detector
+  if (GREETING_KEYWORDS.some(k => msg === k || msg.startsWith(k))) {
+    return GREETING_RESPONSES[
+      Math.floor(Math.random() * GREETING_RESPONSES.length)
+    ];
+  }
+
+  // Help responses
+  if (msg.includes("help") || msg.includes("support")) {
+    return "I'm here to help! Please tell me your concern.";
+  }
+
+  // Account questions
+  if (msg.includes("account") && !msg.includes("problem")) {
+    return "For account-related questions, I may need to create a support ticket for security purposes.";
+  }
+
   if (!message) return null;
 
   const messageLower = message.toLowerCase();

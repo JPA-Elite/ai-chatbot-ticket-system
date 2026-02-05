@@ -1,5 +1,27 @@
 export const MAX_CHARS = 100_000;
 
+export const GREETING_KEYWORDS = [
+  "hi",
+  "hello",
+  "hey",
+  "hi there",
+  "hello there",
+  "hey there",
+  "good morning",
+  "good afternoon",
+  "good evening",
+  "good day",
+  "greetings"
+];
+
+export const GREETING_RESPONSES = [
+  "Hi! I'm your support chatbot. How may I help you today?",
+  "Hello! 👋 How can I assist you today?",
+  "Hi there! I'm here to help. What do you need?",
+  "Hello! Feel free to ask me anything.",
+  "Hey! 😊 How may I assist you?"
+];
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",
