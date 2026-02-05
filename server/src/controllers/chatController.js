@@ -129,6 +129,17 @@ export const sendMessage = async (req, res) => {
     const hasTicketGuidanceIntent = (text = "") => {
       const msg = normalize(text);
 
+      const staffRoutingPhrases = [
+        "assistance for your staff",
+        "assist me for the staff",
+        "help me with your staff",
+        "talk to staff",
+        "speak to staff",
+        "connect me to staff",
+        "who are your staff",
+        "staff members"
+      ];
+
       const asksTicketAction =
         (msg.includes("file") || msg.includes("create") || msg.includes("open") || msg.includes("submit"))
         && msg.includes("ticket");
@@ -137,7 +148,12 @@ export const sendMessage = async (req, res) => {
         (msg.includes("how") || msg.includes("guide") || msg.includes("steps") || msg.includes("process"))
         && msg.includes("ticket");
 
-      const asksEscalation = msg.includes("escalat") || msg.includes("human agent") || msg.includes("support staff");
+      const asksEscalation =
+        msg.includes("escalat")
+        || msg.includes("human agent")
+        || msg.includes("support staff")
+        || staffRoutingPhrases.some(phrase => msg.includes(phrase))
+        || (msg.includes("staff") && (msg.includes("assist") || msg.includes("assistance") || msg.includes("help")));
 
       return asksTicketAction || asksTicketHowTo || asksEscalation;
     };
