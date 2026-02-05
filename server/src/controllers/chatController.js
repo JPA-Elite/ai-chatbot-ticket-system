@@ -195,8 +195,10 @@ AI Response: ${aiResponse}`,
 
           if (student) {
             if (matchedStaffEmail) {
+              console.log('Sending ticket created email to matched staff:', matchedStaffEmail);
               await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
             } else {
+              console.log('No matched staff email found, sending to all relevant staff.');
               await sendTicketCreatedToStaff(ticket, student.name, student.email);
             }
           }
