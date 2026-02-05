@@ -14,6 +14,7 @@ interface StaffMember {
   isActive: boolean;
   createdAt: Date;
   department?: string;
+  tags?: string[];
   stats: {
     totalTickets: number;
     resolvedTickets: number;
@@ -38,6 +39,8 @@ const StaffDashboard: React.FC = () => {
     name: string;
     email: string;
     isActive: boolean;
+    tags: string[];
+    tagsText: string;
     password?: string;
     confirmPassword?: string;
   } | null>(null);
@@ -46,10 +49,19 @@ const StaffDashboard: React.FC = () => {
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
+    tagsText: '',
     password: '',
     confirmPassword: '',
   });
   const { token, user: currentUser } = useAuth();
+
+  const parseTags = (value: string) =>
+    value
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+  const tagsToText = (tags?: string[]) => (tags || []).join(', ');
 
   useEffect(() => {
     fetchStaffMembers();
@@ -317,6 +329,9 @@ const StaffDashboard: React.FC = () => {
                   Staff Member
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tags
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -359,6 +374,27 @@ const StaffDashboard: React.FC = () => {
                       </div>
                     </div>
                   </td>
+
+                  <td className="px-6 py-4">
+                    {(staff.tags && staff.tags.length) ? (
+                      <div className="flex flex-wrap gap-2 max-w-md">
+                        {staff.tags.slice(0, 8).map(tag => (
+                          <span
+                            key={`${staff._id}-${tag}`}
+                            className="inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {staff.tags.length > 8 && (
+                          <span className="text-xs text-gray-500">+{staff.tags.length - 8}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">No tags</span>
+                    )}
+                  </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${staff.isActive
                       ? 'bg-green-100 text-green-800'
@@ -412,11 +448,14 @@ const StaffDashboard: React.FC = () => {
                     <div className="flex justify-end space-x-2">
                       <button className="text-blue-600 hover:text-blue-900"
                         onClick={() => {
+                          const initialTags = staff.tags || [];
                           setEditStaff({
                             _id: staff._id,
                             name: staff.name,
                             email: staff.email,
                             isActive: staff.isActive,
+                            tags: initialTags,
+                            tagsText: tagsToText(initialTags),
                           });
                           setShowEditModal(true);
                         }}>
@@ -455,6 +494,7 @@ const StaffDashboard: React.FC = () => {
             setNewStaff({
               name: '',
               email: '',
+              tagsText: '',
               password: '',
               confirmPassword: '',
             });
@@ -523,6 +563,14 @@ const StaffDashboard: React.FC = () => {
           />
 
           <input
+            type="text"
+            placeholder="Tags (comma-separated)"
+            className="w-full border px-3 py-2 rounded"
+            value={newStaff.tagsText}
+            onChange={e => setNewStaff({ ...newStaff, tagsText: e.target.value })}
+          />
+
+          <input
             type="password"
             placeholder="Password"
             className="w-full border px-3 py-2 rounded"
@@ -583,6 +631,20 @@ const StaffDashboard: React.FC = () => {
               value={editStaff.email}
               onChange={e =>
                 setEditStaff({ ...editStaff, email: e.target.value })
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Tags (comma-separated)"
+              className="w-full border px-3 py-2 rounded"
+              value={editStaff.tagsText}
+              onChange={e =>
+                setEditStaff({
+                  ...editStaff,
+                  tagsText: e.target.value,
+                  tags: parseTags(e.target.value),
+                })
               }
             />
 
@@ -668,6 +730,7 @@ const StaffDashboard: React.FC = () => {
       {
         name: newStaff.name,
         email: newStaff.email,
+        tags: parseTags(newStaff.tagsText),
         password: newStaff.password,
       },
       {
@@ -682,6 +745,7 @@ const StaffDashboard: React.FC = () => {
           setNewStaff({
             name: '',
             email: '',
+            tagsText: '',
             password: '',
             confirmPassword: '',
           });
@@ -713,6 +777,7 @@ const StaffDashboard: React.FC = () => {
         name: editStaff.name,
         email: editStaff.email,
         isActive: editStaff.isActive,
+        tags: editStaff.tags,
         ...(editStaff.password && { password: editStaff.password }),
       },
       {

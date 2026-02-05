@@ -26,8 +26,11 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 };
 
-export const sendTicketCreatedToStaff = async (ticket, studentName, studentEmail) => {
-  const staffEmails = await getStaffEmails();
+export const sendTicketCreatedToStaff = async (ticket, studentName, studentEmail, staffEmailsOverride = []) => {
+  const staffEmails = Array.isArray(staffEmailsOverride) && staffEmailsOverride.length
+    ? staffEmailsOverride
+    : await getStaffEmails();
+
   if (staffEmails.length === 0) {
     console.log('No staff emails found');
     return;

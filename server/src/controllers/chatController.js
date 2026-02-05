@@ -68,21 +68,72 @@ export const sendMessage = async (req, res) => {
       aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
       chat.escalatedToTicket = true;
 
+      const normalize = (s = "") =>
+        String(s).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+      const studentText = normalize(message);
+
+      const staffList = await User.find({
+        role: { $in: ["staff", "admin"] },
+        isActive: true,
+        tags: { $exists: true, $ne: [] },
+      }).select("_id name email tags");
+
+      const scoreTag = (tag, text) => {
+        const t = normalize(tag);
+        if (!t) return 0;
+
+        const words = t.split(" ").filter(Boolean);
+        let score = 0;
+
+        for (const w of words) {
+          if (w.length >= 3 && text.includes(w)) score += 1;
+        }
+
+        if (text.includes(t)) score += 3;
+        return score;
+      };
+
+      let best = { staff: null, tag: "", score: 0 };
+
+      for (const staff of staffList) {
+        const tags = Array.isArray(staff.tags) ? staff.tags : [];
+        for (const tag of tags) {
+          const s = scoreTag(tag, studentText);
+          if (s > best.score) best = { staff, tag, score: s };
+        }
+      }
+
+      const assignedStaffId = best.staff ? best.staff._id : null;
+      const matchedTag = best.tag || "";
       const ticket = await Ticket.create({
         userId,
         chatId: chat._id,
         title: `${message.substring(0, 50)}...`,
         description: `Chat escalated to ticket. User message: ${message}\n\nAI Response: ${aiResponse}`,
         category: 'other',
-        priority: 'medium'
+        priority: 'medium',
+        assignedTo: assignedStaffId,
+        tag: matchedTag,
+        status: 'pending'
       });
 
       chat.ticketId = ticket._id;
 
       try {
         const student = await User.findById(userId).select('name email');
+
+        const matchedStaffEmail =
+          ticket.assignedTo
+            ? (await User.findById(ticket.assignedTo).select('email'))?.email
+            : null;
+
         if (student) {
-          await sendTicketCreatedToStaff(ticket, student.name, student.email);
+          if (matchedStaffEmail) {
+            await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+          } else {
+            await sendTicketCreatedToStaff(ticket, student.name, student.email);
+          }
         }
       } catch (emailError) {
         console.error('Error sending ticket notification email:', emailError);

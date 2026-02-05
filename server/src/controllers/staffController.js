@@ -46,8 +46,8 @@ export const getAllStaff = async (req, res) => {
 
         return {
           ...staff.toObject(),
-          // Ensure isActive defaults to true if not set
           isActive: staff.isActive !== undefined ? staff.isActive : true,
+          tags: Array.isArray(staff.tags) ? staff.tags : [],
           stats: {
             totalTickets,
             resolvedTickets,
@@ -136,7 +136,7 @@ export const getStaffById = async (req, res) => {
 // @access  Private/Admin
 export const updateStaff = async (req, res) => {
   try {
-    const { name, email, role, isActive, department } = req.body;
+    const { name, email, role, isActive, department, tags } = req.body;
 
     const staff = await User.findById(req.params.id);
 
@@ -165,6 +165,12 @@ export const updateStaff = async (req, res) => {
     if (typeof isActive === 'boolean') staff.isActive = isActive;
     if (department) staff.department = department;
 
+    if (Array.isArray(tags)) {
+      staff.tags = tags
+        .map(t => String(t).trim())
+        .filter(Boolean);
+    }
+
     await staff.save();
 
     res.status(200).json({
@@ -185,7 +191,7 @@ export const updateStaff = async (req, res) => {
 // @access  Private/Admin
 export const createStaff = async (req, res) => {
   try {
-    const { name, email, password, role, department } = req.body;
+    const { name, email, password, role, department, tags } = req.body;
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -204,7 +210,10 @@ export const createStaff = async (req, res) => {
       password,
       role: role || 'staff',
       department: department || 'support',
-      isActive: true
+      isActive: true,
+      tags: Array.isArray(tags)
+        ? tags.map(t => String(t).trim()).filter(Boolean)
+        : []
     });
 
     res.status(201).json({
@@ -215,7 +224,8 @@ export const createStaff = async (req, res) => {
         email: staff.email,
         role: staff.role,
         department: staff.department,
-        isActive: staff.isActive
+        isActive: staff.isActive,
+        tags: staff.tags || []
       }
     });
   } catch (error) {
