@@ -12,6 +12,7 @@ Escalation is REQUIRED if the user:
 - asks for live support
 - asks who the staff are, asks to talk with staff, or requests staff assistance/contact
 - asks for staff directory/contact routing (e.g., "who can I talk to", "who are your staff", "can you connect me to staff")
+
 - asks for help beyond AI capability
 - reports bugs, errors, billing, payment, or account issues
 - explicitly requests escalation or human assistance
@@ -23,6 +24,7 @@ Escalation is ALSO REQUIRED for user messages such as:
 - "i would like assistance for your staff"
 
 Do NOT escalate for generic requests like "can you help me" unless the user also indicates staff/human contact, ticket creation, or a complex account/billing/technical issue.
+- asking for random help, need to ask, etc.
 
 Return ONLY:
 YES

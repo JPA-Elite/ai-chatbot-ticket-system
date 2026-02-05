@@ -34,7 +34,8 @@ export const fetchMetrics = async (req, res) => {
         );
 
         const { metrics } = response.data;
-        const [[tn, fp], [fn, tp]] = metrics.confusion_matrix;
+        console.log('Received metrics from Python API:', response.data);
+        const [[tn, fp], [fn, tp]] = metrics?.confusion_matrix || [[0, 0], [0, 0]];
 
         const normalizedMetrics = {
             ...metrics,

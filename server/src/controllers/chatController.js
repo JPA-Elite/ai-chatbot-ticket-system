@@ -185,7 +185,7 @@ export const sendMessage = async (req, res) => {
       const staffList = await getActiveStaffWithTags();
       const best = findBestStaffMatch(staffList, studentText);
 
-      if (analyzeResult !== true || !best.staff || best.score === 0) {
+      if (!best.staff || best.score === 0) {
         aiResponse = formatStaffSelectionMessage(staffList);
       } else {
         aiResponse = "I understand this is a complex issue that requires specialized attention. I'm not able to fully address this myself, so I'll create a support ticket to connect you with one of our expert team members who can provide the detailed assistance you need.";
@@ -220,8 +220,10 @@ AI Response: ${aiResponse}`,
           if (student) {
             if (matchedStaffEmail) {
               await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+              console.log(`Ticket created and notification sent to assigned staff: ${matchedStaffEmail}`);
             } else {
               await sendTicketCreatedToStaff(ticket, student.name, student.email);
+              console.log('Ticket created but no specific staff assigned, notification sent to general staff inbox');
             }
           }
         } catch (emailError) {
