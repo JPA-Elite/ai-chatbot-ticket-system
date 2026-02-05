@@ -1,7 +1,7 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import User from '../models/User.js';
-import { analyzeConversation } from '../services/aiService.js';
+import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
 
 const pickBestTag = async (message) => {
@@ -163,6 +163,8 @@ export const sendMessage = async (req, res) => {
     } else {
       aiResponse = analyzeResult;
     }
+
+    aiResponse = await matchResponseLanguage(message, aiResponse);
 
     chat.messages.push({
       role: 'assistant',

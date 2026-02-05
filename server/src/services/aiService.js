@@ -14,6 +14,7 @@ import {
   buildCanonicalizeQuestionMessages,
   buildEscalationDecisionMessages,
   buildInquiryGenerationMessages,
+  buildResponseLanguageMatchMessages,
   buildTranslationMessages
 } from "./openaiPrompts.js";
 
@@ -435,6 +436,35 @@ export async function detectAndTranslateToEnglish(text) {
   } catch (error) {
     console.error("OpenAI translation error:", error);
     return text; // fallback to original text
+  }
+}
+
+/**
+ * Rewrite assistant response to match the user's language
+ * @param {string} userMessage - Latest user message
+ * @param {string} assistantResponse - Generated assistant response
+ * @returns {Promise<string>} - Language-matched response
+ */
+export async function matchResponseLanguage(userMessage, assistantResponse) {
+  if (!assistantResponse) {
+    return assistantResponse;
+  }
+
+  if (detectEnglishLanguage(String(userMessage || ""))) {
+    return assistantResponse;
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: process.env.CHATGPT_MODEL,
+      messages: buildResponseLanguageMatchMessages(userMessage, assistantResponse),
+      temperature: 0
+    });
+
+    return response.choices[0].message.content.trim() || assistantResponse;
+  } catch (error) {
+    console.error("OpenAI response language match error:", error);
+    return assistantResponse;
   }
 }
 

@@ -104,3 +104,30 @@ Question:
     }
   ];
 }
+
+
+export function buildResponseLanguageMatchMessages(userMessage = "", assistantResponse = "") {
+  return [
+    {
+      role: "system",
+      content: "You are a multilingual support rewriting assistant."
+    },
+    {
+      role: "user",
+      content: `Rewrite the assistant response so it matches the user's language and tone.
+
+Rules:
+- Keep the original meaning exactly.
+- Keep the response concise and helpful.
+- If the user message is already in English, return the response in English.
+- If the user message is in Tagalog, Bisaya/Cebuano, or any other language, return the response in that same language.
+- Return ONLY the rewritten response text.
+
+User message:
+"${userMessage}"
+
+Assistant response:
+"${assistantResponse}"`
+    }
+  ];
+}
