@@ -30,6 +30,29 @@ const escalationTriggers = [
   "not working", "broken", "complex", "advanced", "specialist", "urgent"
 ];
 
+function isGreetingOnlyMessage(message = "") {
+  const normalized = String(message)
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return false;
+
+  const words = normalized.split(" ");
+  if (words.length > 6) return false;
+
+  for (let i = words.length; i > 0; i -= 1) {
+    const phrase = words.slice(0, i).join(" ");
+    if (GREETING_KEYWORDS.includes(phrase)) {
+      const remainder = words.slice(i);
+      return remainder.length === 0 || isGreetingOnlyMessage(remainder.join(" "));
+    }
+  }
+
+  return false;
+}
+
 /**
  * Analyze conversation for escalation using AI
  * @param {Array} chatHistory - Full conversation history
@@ -40,9 +63,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
   try {
     const msg = String(latestMessage || "").toLowerCase().trim();
 
-    const isGreetingOnly =
-      msg.length <= 40 &&
-      GREETING_KEYWORDS.some(k => msg === k || msg.startsWith(k + " ") || msg.startsWith(k + "!") || msg.startsWith(k + "."));
+    const isGreetingOnly = msg.length <= 40 && isGreetingOnlyMessage(msg);
 
     if (isGreetingOnly) {
       return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
@@ -241,7 +262,7 @@ export function getRuleBasedResponse(message) {
   const msg = message.toLowerCase().trim();
 
   // Greeting detector
-  if (GREETING_KEYWORDS.some(k => msg === k || msg.startsWith(k))) {
+  if (isGreetingOnlyMessage(msg)) {
     return GREETING_RESPONSES[
       Math.floor(Math.random() * GREETING_RESPONSES.length)
     ];
