@@ -116,6 +116,20 @@ Try these phrases to test ticket escalation:
    )
    ```
 
+## Running the Ticket Classifier Migration
+
+The server supports a one-off migration to load staff users from `server/src/data/files/ticket-classifier.csv`
+and set their password to `TempPass123!` (hashed before storage).
+
+1. Ensure MongoDB is running and your server `.env` file is configured.
+2. Run the migration from the project root:
+   ```bash
+   npm run server -- --migration=ticket-classifier
+   ```
+
+The migration will connect to MongoDB, upsert users in the `users` collection, and then exit without starting
+the HTTP server.
+
 ## Adding Real OpenAI Integration
 
 When you get an OpenAI API key:
