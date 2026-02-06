@@ -88,6 +88,28 @@ const formatStaffSelectionMessage = (staffList = []) => {
   ].join('\n');
 };
 
+const normalizeInquiryText = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const computeTokenOverlap = (left = "", right = "") => {
+  const leftTokens = new Set(normalizeInquiryText(left).split(" ").filter(Boolean));
+  const rightTokens = new Set(normalizeInquiryText(right).split(" ").filter(Boolean));
+
+  if (!leftTokens.size || !rightTokens.size) return 0;
+
+  let intersection = 0;
+  for (const token of leftTokens) {
+    if (rightTokens.has(token)) intersection += 1;
+  }
+
+  const union = new Set([...leftTokens, ...rightTokens]);
+  return intersection / union.size;
+};
+
 const findUpdatedInquiryOverride = async (message = "") => {
   const updatedEntries = await InquiryRelevance.find({ isUpdated: true })
     .select('userInquiry generatedInquiry generatedResponse isRelevant createdAt')
@@ -97,6 +119,32 @@ const findUpdatedInquiryOverride = async (message = "") => {
 
   if (!updatedEntries.length) {
     return null;
+  }
+
+  const normalizedMessage = normalizeInquiryText(message);
+  if (normalizedMessage) {
+    const exactMatch = updatedEntries.find(entry => (
+      normalizeInquiryText(entry.userInquiry) === normalizedMessage
+    ));
+
+    if (exactMatch) {
+      return exactMatch;
+    }
+  }
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const entry of updatedEntries) {
+    const score = computeTokenOverlap(entry.userInquiry, message);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = entry;
+    }
+  }
+
+  if (bestMatch && bestScore >= 0.6) {
+    return bestMatch;
   }
 
   const formattedEntries = updatedEntries
