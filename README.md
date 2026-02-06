@@ -82,6 +82,7 @@ This version includes mock AI responses so you can test the application without 
 6. Access the application:
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:5000 (or set `VITE_API_BASE_URL`)
+   - Python API: http://127.0.0.1:8000 (or set `PYTHON_API_BASE_URL`)
 
 ## Testing the Mock AI
 

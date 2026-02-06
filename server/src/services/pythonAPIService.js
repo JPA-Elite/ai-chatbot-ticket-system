@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { PYTHON_API_BASE_URL } from '../config/api.js';
 import { fetchRelevanceData } from '../repositories/pythonRepository.js';
 import {
   INSUFFICIENT_METRICS_DATA_MESSAGE,
@@ -25,7 +26,7 @@ export const fetchMetricsData = async () => {
 
   try {
     const response = await axios.post(
-      'http://127.0.0.1:8000/metrics/compute-metrics',
+      `${PYTHON_API_BASE_URL}/metrics/compute-metrics`,
       payload,
       {
         headers: { 'Content-Type': 'application/json' },
