@@ -17,6 +17,7 @@ import staffRoutes from './routes/staff.js';
 import inquiryRoutes from './routes/inquiry.js';
 import inquiryRelevanceRoutes from './routes/inquiryRelevance.js';
 import metricsRoutes from './routes/metrics.js';
+import { listMigrations, runMigration } from './migrations/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +44,31 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+function getMigrationName() {
+  if (process.env.MIGRATION) {
+    return process.env.MIGRATION;
+  }
+
+  if (process.env.npm_config_migration) {
+    return process.env.npm_config_migration;
+  }
+
+  const argIndex = process.argv.findIndex((arg) => arg === '--migration');
+  if (argIndex !== -1 && process.argv[argIndex + 1]) {
+    return process.argv[argIndex + 1];
+  }
+
+  const migrationArg = process.argv.find((arg) => arg.startsWith('--migration='));
+  if (migrationArg) {
+    return migrationArg.split('=')[1];
+  }
+
+  return null;
+}
+
+const migrationName = getMigrationName();
+const shouldRunMigration = Boolean(migrationName);
 
 // Middleware
 app.use(cors());
@@ -94,8 +120,26 @@ io.on('connection', (socket) => {
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
+
+    if (shouldRunMigration) {
+      try {
+        console.log(`Running migration: ${migrationName}`);
+        const migrationResult = await runMigration(migrationName);
+        console.log('Migration completed:', migrationResult);
+        process.exitCode = 0;
+      } catch (err) {
+        console.error('Migration failed:', err);
+        console.log(`Available migrations: ${listMigrations().join(', ') || 'none'}`);
+        process.exitCode = 1;
+      } finally {
+        await mongoose.connection.close();
+        process.exit(process.exitCode ?? 0);
+      }
+
+      return;
+    }
     
     // Start server
     const PORT = process.env.PORT || 5000;
