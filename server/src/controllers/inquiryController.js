@@ -465,7 +465,7 @@ export const updateInquiryRelevance = async (req, res) => {
       });
     }
 
-    const { isRelevant } = req.body;
+    const { isRelevant, isUpdated } = req.body;
 
     if (isRelevant === undefined) {
       return res.status(400).json({
@@ -481,7 +481,10 @@ export const updateInquiryRelevance = async (req, res) => {
         generatedInquiry: entry.generatedInquiry,
       },
       {
-        $set: { isRelevant },
+        $set: {
+          isRelevant,
+          ...(typeof isUpdated === 'boolean' ? { isUpdated } : {}),
+        },
       }
     );
 

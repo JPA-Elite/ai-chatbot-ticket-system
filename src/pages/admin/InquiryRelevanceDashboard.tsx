@@ -14,6 +14,7 @@ interface InquiryRelevance {
   similarityScore: number;
   responsTime: number;
   isRelevant: number;
+  isUpdated?: boolean;
   createdAt: string;
 }
 
@@ -79,6 +80,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
         generatedInquiry: editInquiry.generatedInquiry,
         generatedResponse: editInquiry.generatedResponse,
         isRelevant: editInquiry.isRelevant,
+        isUpdated: true,
       },
       {
         headers: {
