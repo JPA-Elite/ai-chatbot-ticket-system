@@ -1,5 +1,6 @@
 import { franc } from "franc"; // works only if the package exports named exports
 import multer from 'multer';
+import openai from "../config/openaiClient.js";
 
 export const detectEnglishLanguage = (text) => {
     const langCode = franc(text);
@@ -14,3 +15,6 @@ export const upload = multer({
 
 export const escapeRegex = (text) =>
     text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export const createChatCompletion = (options) =>
+    openai.chat.completions.create(options);

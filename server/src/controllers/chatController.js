@@ -2,9 +2,9 @@ import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import User from '../models/User.js';
 import InquiryRelevance from '../models/InquiryRelevance.js';
-import openai from '../config/openaiClient.js';
 import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
+import { createChatCompletion } from '../utils/utils.js';
 import {
   ASSIGNMENT_INTENT_REGEX,
   CHAT_HISTORY_CONTENT_LIMIT,
@@ -157,7 +157,7 @@ const findUpdatedInquiryOverride = async (message = "") => {
     ].join('\n')))
     .join('\n\n');
 
-  const response = await openai.chat.completions.create({
+  const response = await createChatCompletion({
     model: process.env.CHATGPT_MODEL,
     temperature: 0,
     response_format: { type: 'json_object' },
