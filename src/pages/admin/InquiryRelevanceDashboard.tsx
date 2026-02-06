@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Search } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Modal from '../../components/modal/ui/Modal';
-import API_BASE_URL from '../../config/api';
+import API_BASE_URL, { WEB_APP_BASE_URL } from '../../config/api';
 
 interface InquiryRelevance {
   _id: string;
@@ -32,7 +32,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
     isRelevant: number;
   } | null>(null);
   const [relevanceFilter, setRelevanceFilter] = useState<'all' | 'relevant' | 'not_relevant'>('all');
-  const [updatedFilter, setUpdatedFilter] = useState<'all' | 'updated' | 'not_updated'>('all');
+  const [updatedFilter, setUpdatedFilter] = useState<'all' | 'updated' | 'not_updated'>('not_updated');
 
   const { token } = useAuth();
 
@@ -175,6 +175,13 @@ const InquiryRelevanceDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
+        <a
+          href={`${WEB_APP_BASE_URL}/admin`}
+          className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Admin
+        </a>
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

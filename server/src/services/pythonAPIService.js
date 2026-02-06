@@ -34,6 +34,17 @@ export const fetchMetricsData = async () => {
       }
     );
 
+    if (response.data?.status !== 'success') {
+      return {
+        status: 500,
+        payload: {
+          status: response.data?.status || 'error',
+          metrics: {},
+          message: response.data?.message || METRICS_FETCH_FAILED_MESSAGE
+        }
+      };
+    }
+
     const { metrics } = response.data;
     const [[tn, fp], [fn, tp]] = metrics?.confusion_matrix || [[0, 0], [0, 0]];
 
