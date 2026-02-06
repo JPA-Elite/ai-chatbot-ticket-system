@@ -39,3 +39,4 @@ __pypackages__/
 *.spec
 *.pyc
 server/python/*.pyc
+venv/
