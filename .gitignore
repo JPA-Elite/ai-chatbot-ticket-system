@@ -39,4 +39,6 @@ __pypackages__/
 *.spec
 *.pyc
 server/python/*.pyc
-server/venv/
+server/python/venv/
+server/python/.venv/
+server/python/env/
