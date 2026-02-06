@@ -144,7 +144,7 @@ export const FILLER_PHRASES = [
     // redundancy
     "basically",
     "actually",
-    "literally",
+    "literally", 
     "honestly",
     "generally"
 ];
@@ -155,11 +155,12 @@ export const RESPOND_TO_ESCALATION_MSG = "I can't fully assist with your request
 
 export const STAFF_ROLES = ["staff", "admin"];
 
-export const STAFF_SELECTION_MAX_RESULTS = 8;
+export const STAFF_SELECTION_MAX_RESULTS = 50;
 
 export const STAFF_TAG_DEFAULT = "General";
 export const STAFF_CONCERN_PREVIEW_LIMIT = 4;
 
+export const STAFF_NUMBER_SELECTION_REGEX = /^\s*(\d{1,2})\s*$/;
 export const DEFAULT_STAFF_NAME = "Unknown Staff";
 export const DEFAULT_STAFF_ROLE = "staff";
 export const DEFAULT_STAFF_EMAIL = "No email";
@@ -168,7 +169,7 @@ export const STAFF_SELECTION_INTRO_LINES = [
   "I can help you file a support ticket.",
   "Please choose one of the following staff members and share your concern category so I can route your ticket correctly:"
 ];
-export const STAFF_SELECTION_EXAMPLE_REPLY = "Example reply: 'Please assign this to Karen C. De Vera for Student Records.'";
+export const STAFF_SELECTION_EXAMPLE_REPLY = "Example reply: Reply with a number (e.g., 1, 2, 3) to select a staff, or type your request.";
 
 export const CHAT_SYSTEM_MESSAGE = "You are a helpful customer support assistant. Answer user questions clearly and concisely. If you cannot answer a question or the question requires specialized knowledge, indicate that the issue needs to be escalated to a support representative.";
 

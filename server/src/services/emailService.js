@@ -10,18 +10,42 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, meta = {} }) => {
   try {
+    const toList = Array.isArray(to)
+      ? to.filter(Boolean)
+      : String(to || "")
+          .split(",")
+          .map(s => s.trim())
+          .filter(Boolean);
+
+    console.log("======================================");
+    console.log("📨 EMAIL SEND START");
+    console.log("📌 Subject:", subject);
+    console.log("📩 To:", toList.length ? toList.join(", ") : "N/A");
+
+    if (meta.ticketId) console.log("🆔 Ticket ID:", String(meta.ticketId));
+    if (meta.studentName) console.log("👨‍🎓 Student:", meta.studentName);
+    if (meta.studentEmail) console.log("📧 Student Email:", meta.studentEmail);
+
+    console.log("======================================");
+
     const info = await transporter.sendMail({
       from: `"${process.env.SMTP_FROM_NAME}" <${process.env.SMTP_FROM_EMAIL}>`,
-      to,
+      to: toList.join(", "),
       subject,
       html,
     });
-    console.log('Email sent:', info.messageId);
+
+    console.log("✅ EMAIL SENT");
+    console.log("📬 Message ID:", info.messageId);
+    console.log("📤 Final TO:", toList.join(", "));
+    console.log("======================================");
+
     return info;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error("❌ EMAIL SEND ERROR");
+    console.error("Message:", error.message);
     throw error;
   }
 };
@@ -80,9 +104,14 @@ export const sendTicketCreatedToStaff = async (ticket, studentName, studentEmail
   `;
 
   await sendEmail({
-    to: staffEmails.join(', '),
-    subject: `[New Ticket] ${ticket.title} - ${ticket.priority.toUpperCase()}`,
+    to: staffEmails,
+    subject: `[New Ticket] ${ticket.title} - ${String(ticket.priority || "").toUpperCase()}`,
     html,
+    meta: {
+      ticketId: ticket._id,
+      studentName,
+      studentEmail
+    }
   });
 };
 

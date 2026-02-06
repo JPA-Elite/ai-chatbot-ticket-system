@@ -15,6 +15,7 @@ import {
   DEFAULT_TICKET_PRIORITY,
   DEFAULT_TICKET_STATUS,
   ESCALATION_AUTO_TICKET_RESPONSE,
+  STAFF_NUMBER_SELECTION_REGEX,
   STAFF_ROLES,
   STAFF_CONCERN_PREVIEW_LIMIT,
   STAFF_SELECTION_EXAMPLE_REPLY,
@@ -196,11 +197,228 @@ export const sendMessage = async (req, res) => {
       return best;
     };
 
-    const getActiveStaffWithTags = async () => User.find({
-      role: { $in: STAFF_ROLES },
-      isActive: true,
-      tags: { $exists: true, $ne: [] },
-    }).select("_id name email tags role");
+    const getActiveStaffWithTags = async () =>
+      User.find({
+        role: { $in: STAFF_ROLES },
+        isActive: true
+      })
+        .select("_id name email tags role")
+        .sort({ name: 1, _id: 1 });
+
+    const selectionMatch = STAFF_NUMBER_SELECTION_REGEX.exec(String(message || ""));
+
+    const lastAssistantIndex = (() => {
+      for (let i = chat.messages.length - 1; i >= 0; i -= 1) {
+        if (chat.messages[i]?.role === "assistant") return i;
+      }
+      return -1;
+    })();
+
+    const lastAssistantText =
+      lastAssistantIndex >= 0 ? String(chat.messages[lastAssistantIndex]?.content || "") : "";
+
+    const isStaffListContext =
+      lastAssistantText.includes(STAFF_SELECTION_EXAMPLE_REPLY) ||
+      STAFF_SELECTION_INTRO_LINES.some(line => lastAssistantText.includes(line));
+
+    const extractLastTicketIntentMessage = () => {
+      if (lastAssistantIndex > 0) {
+        for (let i = lastAssistantIndex - 1; i >= 0; i -= 1) {
+          if (chat.messages[i]?.role === "user") {
+            return String(chat.messages[i]?.content || "");
+          }
+        }
+      }
+      return "";
+    };
+
+    const normalizeLoose = (s = "") =>
+      String(s)
+        .toLowerCase()
+        .replace(/[^a-z0-9\s@.\-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const selectStaffByText = (staffList = [], userText = "") => {
+      const input = normalizeLoose(userText);
+      if (!input) return { staff: null, ambiguous: false };
+
+      const emailLike = input.includes("@") ? input : "";
+      const candidates = staffList.slice(0, STAFF_SELECTION_MAX_RESULTS);
+
+      const emailMatches = emailLike
+        ? candidates.filter(s => normalizeLoose(s.email || "") === emailLike)
+        : [];
+
+      if (emailMatches.length === 1) return { staff: emailMatches[0], ambiguous: false };
+      if (emailMatches.length > 1) return { staff: null, ambiguous: true };
+
+      const tokens = input.split(" ").filter(Boolean);
+      const stop = new Set(["staff", "admin", "please", "assign", "route", "forward", "endorse", "to", "for", "this", "ticket"]);
+      const keyTokens = tokens.filter(t => t.length >= 3 && !stop.has(t));
+
+      if (!keyTokens.length) return { staff: null, ambiguous: false };
+
+      const scored = candidates
+        .map(s => {
+          const name = normalizeLoose(s.name || "");
+          if (!name) return { staff: s, score: 0 };
+          let score = 0;
+
+          for (const t of keyTokens) {
+            if (name.includes(t)) score += 1;
+          }
+
+          if (input === name) score += 5;
+          if (input.length >= 4 && name.includes(input)) score += 3;
+
+          return { staff: s, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      if (!scored.length) return { staff: null, ambiguous: false };
+
+      const top = scored[0];
+      const second = scored[1];
+
+      if (second && top.score === second.score) return { staff: null, ambiguous: true };
+
+      if (top.score >= 2) return { staff: top.staff, ambiguous: false };
+
+      return { staff: null, ambiguous: false };
+    };
+
+    const createTicketForSelectedStaff = async (selectedStaff, triggerUserMessage) => {
+      const triggerText = normalize(triggerUserMessage);
+      const staffTags = Array.isArray(selectedStaff.tags) ? selectedStaff.tags : [];
+
+      let chosenTag = STAFF_TAG_DEFAULT;
+      let bestTagScore = 0;
+
+      for (const tag of staffTags) {
+        const r = scoreTag(tag, triggerText);
+        if (r.score > bestTagScore) {
+          bestTagScore = r.score;
+          chosenTag = String(tag || "").trim() || STAFF_TAG_DEFAULT;
+        }
+      }
+
+      if (chosenTag === STAFF_TAG_DEFAULT && staffTags.length) {
+        chosenTag = String(staffTags[0] || "").trim() || STAFF_TAG_DEFAULT;
+      }
+
+      aiResponse = ESCALATION_AUTO_TICKET_RESPONSE;
+      chat.escalatedToTicket = true;
+      escalated = true;
+
+      const titleBase = triggerUserMessage || "Support request";
+      const safeTitle =
+        titleBase.length > TICKET_TITLE_PREVIEW_LENGTH
+          ? `${titleBase.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`
+          : titleBase;
+
+      const ticket = await Ticket.create({
+        userId,
+        chatId: chat._id,
+        title: safeTitle,
+        description: TICKET_DESCRIPTION_TEMPLATE(triggerUserMessage || message, aiResponse),
+        category: DEFAULT_TICKET_CATEGORY,
+        priority: DEFAULT_TICKET_PRIORITY,
+        assignedTo: selectedStaff._id,
+        tag: chosenTag || "",
+        status: DEFAULT_TICKET_STATUS
+      });
+
+      chat.ticketId = ticket._id;
+      ticketId = ticket._id;
+
+      try {
+        const student = await User.findById(userId).select("name email");
+
+        const matchedStaffEmail =
+          ticket.assignedTo
+            ? (await User.findById(ticket.assignedTo).select("email"))?.email
+            : null;
+
+        if (student) {
+          if (matchedStaffEmail) {
+            await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+          } else {
+            await sendTicketCreatedToStaff(ticket, student.name, student.email);
+          }
+        }
+      } catch (emailError) {
+        console.error("Error sending ticket notification email:", emailError);
+      }
+    };
+
+    if (isStaffListContext) {
+      const staffList = await getActiveStaffWithTags();
+      const max = Math.min(staffList.length, STAFF_SELECTION_MAX_RESULTS);
+
+      if (selectionMatch) {
+        const choice = parseInt(selectionMatch[1], 10);
+
+        if (!Number.isFinite(choice) || choice < 1 || choice > max) {
+          aiResponse = `Please reply with a number from 1 to ${max}.`;
+        } else {
+          const selectedStaff = staffList[choice - 1];
+          const triggerUserMessage = extractLastTicketIntentMessage();
+          await createTicketForSelectedStaff(selectedStaff, triggerUserMessage);
+        }
+
+        chat.messages.push({
+          role: "assistant",
+          content: aiResponse,
+          timestamp: Date.now()
+        });
+
+        await chat.save();
+
+        return res.status(200).json({
+          success: true,
+          data: { chat, escalated, ticketId }
+        });
+      }
+
+      const byText = selectStaffByText(staffList, message);
+
+      if (byText.ambiguous) {
+        aiResponse = `Multiple staff matched. Please reply with a number from 1 to ${max}.`;
+
+        chat.messages.push({
+          role: "assistant",
+          content: aiResponse,
+          timestamp: Date.now()
+        });
+
+        await chat.save();
+
+        return res.status(200).json({
+          success: true,
+          data: { chat, escalated, ticketId }
+        });
+      }
+
+      if (byText.staff) {
+        const triggerUserMessage = extractLastTicketIntentMessage();
+        await createTicketForSelectedStaff(byText.staff, triggerUserMessage);
+
+        chat.messages.push({
+          role: "assistant",
+          content: aiResponse,
+          timestamp: Date.now()
+        });
+
+        await chat.save();
+
+        return res.status(200).json({
+          success: true,
+          data: { chat, escalated, ticketId }
+        });
+      }
+    }
 
     const analyzeResult = await analyzeConversation(chatHistory, message);
 
