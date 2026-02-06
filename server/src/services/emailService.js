@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { WEB_APP_BASE_URL } from '../config/api.js';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -94,7 +95,7 @@ export const sendTicketCreatedToStaff = async (ticket, studentName, studentEmail
           </tr>
         </table>
         <div style="margin-top: 24px; text-align: center;">
-          <a href="http://localhost:5173/admin/tickets/${ticket._id}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Ticket</a>
+          <a href="${WEB_APP_BASE_URL}/admin/tickets/${ticket._id}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Ticket</a>
         </div>
       </div>
       <div style="background-color: #f9fafb; padding: 16px 24px; border-top: 1px solid #e5e7eb;">
@@ -143,7 +144,7 @@ export const sendTicketAcceptedToStudent = async (ticket, studentName, studentEm
         </table>
         <p style="margin-top: 20px; font-size: 14px; color: #4b5563;">You can now communicate with the staff member through the ticket. Please check your ticket for updates.</p>
         <div style="margin-top: 20px; text-align: center;">
-          <a href="http://localhost:5173/tickets/${ticket._id}" style="display: inline-block; background-color: #10b981; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Ticket</a>
+          <a href="${WEB_APP_BASE_URL}/tickets/${ticket._id}" style="display: inline-block; background-color: #10b981; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Ticket</a>
         </div>
       </div>
       <div style="background-color: #f9fafb; padding: 16px 24px; border-top: 1px solid #e5e7eb;">
