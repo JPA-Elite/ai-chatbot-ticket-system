@@ -4,6 +4,7 @@ import { Ticket, CheckCircle, Clock, AlertCircle, ArrowRight, BarChart4 } from '
 import { motion } from 'framer-motion';
 import { useTicket } from '../../context/TicketContext';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface ConfusionMatrix {
@@ -42,7 +43,7 @@ const AdminDashboard: React.FC = () => {
   }, [page, activeFilter]);
 
   const getMetrics = async (): Promise<MetricsResponse> => {
-    const response = await axios.get<MetricsResponse>('http://localhost:5000/api/metrics', {
+    const response = await axios.get<MetricsResponse>(`${API_BASE_URL}/api/metrics`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;

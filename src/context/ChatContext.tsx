@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import axios from "axios";
 import { useAuth } from "./AuthContext";
+import API_BASE_URL from "../config/api";
 
 // Types
 interface Message {
@@ -95,7 +96,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/chat/message",
+        `${API_BASE_URL}/api/chat/message`,
         {
           message,
           chatId,
@@ -159,7 +160,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(true);
       setError(null);
 
-      const res = await axios.get(`http://localhost:5000/api/chat/${chatId}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/chat/${chatId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -182,7 +183,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(true);
       setError(null);
 
-      const res = await axios.get("http://localhost:5000/api/chat", {
+      const res = await axios.get(`${API_BASE_URL}/api/chat`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -209,7 +210,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(true);
       setError(null);
 
-      const res = await axios.delete("http://localhost:5000/api/chat/all", {
+      const res = await axios.delete(`${API_BASE_URL}/api/chat/all`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

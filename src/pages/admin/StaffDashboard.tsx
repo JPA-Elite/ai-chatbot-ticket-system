@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 import Modal from '../../components/modal/ui/Modal';
 
 interface StaffMember {
@@ -72,7 +73,7 @@ const StaffDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get('http://localhost:5000/api/staff', {
+      const response = await axios.get(`${API_BASE_URL}/api/staff`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
@@ -701,7 +702,7 @@ const StaffDashboard: React.FC = () => {
   );
 
   function handleDeleteStaff(staffId: string) {
-    axios.delete(`http://localhost:5000/api/staff/${staffId}`, {
+    axios.delete(`${API_BASE_URL}/api/staff/${staffId}`, {
       headers: {
         Authorization: `Bearer ${token}`
       },
@@ -726,7 +727,7 @@ const StaffDashboard: React.FC = () => {
       return;
     }
 
-    axios.post('http://localhost:5000/api/staff',
+    axios.post(`${API_BASE_URL}/api/staff`,
       {
         name: newStaff.name,
         email: newStaff.email,
@@ -772,7 +773,7 @@ const StaffDashboard: React.FC = () => {
     }
 
     axios.put(
-      `http://localhost:5000/api/staff/${editStaff._id}`,
+      `${API_BASE_URL}/api/staff/${editStaff._id}`,
       {
         name: editStaff.name,
         email: editStaff.email,

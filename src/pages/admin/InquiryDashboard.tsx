@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 import Modal from '../../components/modal/ui/Modal';
 
 interface Inquiry {
@@ -61,7 +62,7 @@ const InquiryDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const res = await axios.get('http://localhost:5000/api/inquiry', {
+      const res = await axios.get(`${API_BASE_URL}/api/inquiry`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { page, limit, search },
       });
@@ -95,7 +96,7 @@ const InquiryDashboard: React.FC = () => {
       setShowProcessingModal(true);
       setIsProcessingSuccess(false);
 
-      const { data } = await axios.post('http://localhost:5000/api/inquiry/import', formData, {
+      const { data } = await axios.post(`${API_BASE_URL}/api/inquiry/import`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -161,7 +162,7 @@ const InquiryDashboard: React.FC = () => {
   };
 
   function handleDeleteInquiry(inquiryId: string) {
-    axios.delete(`http://localhost:5000/api/inquiry/${inquiryId}`, {
+    axios.delete(`${API_BASE_URL}/api/inquiry/${inquiryId}`, {
       headers: {
         Authorization: `Bearer ${token}`
       },
@@ -181,7 +182,7 @@ const InquiryDashboard: React.FC = () => {
   }
 
   function handleAddInquiry() {
-    axios.post('http://localhost:5000/api/inquiry',
+    axios.post(`${API_BASE_URL}/api/inquiry`,
       {
         promptQuestion: newInquiry.promptQuestion,
         promptResponse: newInquiry.promptResponse,
@@ -216,7 +217,7 @@ const InquiryDashboard: React.FC = () => {
     if (!editInquiry) return;
 
     axios.put(
-      `http://localhost:5000/api/inquiry/${editInquiry._id}`,
+      `${API_BASE_URL}/api/inquiry/${editInquiry._id}`,
       {
         promptQuestion: editInquiry.promptQuestion,
         promptResponse: editInquiry.promptResponse,

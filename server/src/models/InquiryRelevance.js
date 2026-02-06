@@ -30,6 +30,10 @@ const InquiryRelevanceSchema = new mongoose.Schema({
     enum: [0, 1], // 0 = Not Relevant, 1 = Relevant
     default: 0
   },
+  isUpdated: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

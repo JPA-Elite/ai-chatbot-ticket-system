@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BarChart3, Clock, CheckCircle, Star, TrendingUp, Users, AlertCircle, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import API_BASE_URL from '../config/api';
 
 interface StaffStats {
   totalTickets: number;
@@ -38,7 +39,7 @@ const StaffStats: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/staff/my-stats', {
+        const response = await fetch(`${API_BASE_URL}/api/staff/my-stats`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

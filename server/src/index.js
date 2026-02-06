@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
+import { WEB_APP_BASE_URL } from './config/api.js';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -27,17 +28,18 @@ const server = http.createServer(app);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? 'https://yourdomain.com' 
-      : 'http://localhost:5173',
+    origin: WEB_APP_BASE_URL,
     methods: ['GET', 'POST']
   }
 });
 
 // Rate limiting
+const rateLimitEnabled = process.env.NODE_ENV === 'production'
+  ? process.env.RATE_LIMIT_ENABLED !== 'false'
+  : process.env.RATE_LIMIT_ENABLED === 'true';
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: Number(process.env.RATE_LIMIT_MAX) || 100, // limit each IP to 100 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -47,7 +49,9 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(helmet());
-app.use(limiter);
+if (rateLimitEnabled) {
+  app.use(limiter);
+}
 
 // Routes
 app.use('/api/auth', authRoutes);

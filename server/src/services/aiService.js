@@ -1,6 +1,6 @@
 import openai from "../config/openaiClient.js";
 import Inquiry from "../models/Inquiry.js";
-import { detectEnglishLanguage } from "../utils/utils.js";
+import { createChatCompletion, detectEnglishLanguage } from "../utils/utils.js";
 import {
   FILLER_PHRASES,
   GREETING_KEYWORDS,
@@ -316,7 +316,7 @@ export function getRuleBasedResponse(message) {
  * @returns {String} - AI-generated response
  */
 export async function generateChatResponse(messages) {
-  const response = await openai.chat.completions.create({
+  const response = await createChatCompletion({
     model: process.env.CHATGPT_MODEL,
     messages,
     temperature: 0,
@@ -425,7 +425,7 @@ export async function detectAndTranslateToEnglish(text) {
   }
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: process.env.CHATGPT_MODEL,
       messages: buildTranslationMessages(text),
       temperature: 0
@@ -455,7 +455,7 @@ export async function matchResponseLanguage(userMessage, assistantResponse) {
   }
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: process.env.CHATGPT_MODEL,
       messages: buildResponseLanguageMatchMessages(userMessage, assistantResponse),
       temperature: 0
@@ -478,7 +478,7 @@ export async function matchResponseLanguage(userMessage, assistantResponse) {
  */
 export async function generateInquiriesAI(content, count = 1) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: process.env.CHATGPT_MODEL,
       messages: buildInquiryGenerationMessages(content, count),
       temperature: 0
@@ -501,7 +501,7 @@ export async function generateInquiriesAI(content, count = 1) {
  * @returns {Promise<String>} - Canonicalized question
  */
 export async function canonicalizeQuestion(question) {
-  const response = await openai.chat.completions.create({
+  const response = await createChatCompletion({
     model: process.env.CHATGPT_MODEL,
     temperature: 0,
     messages: buildCanonicalizeQuestionMessages(question)
