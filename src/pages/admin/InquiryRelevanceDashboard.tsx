@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import Modal from '../../components/modal/ui/Modal';
 import API_BASE_URL from '../../config/api';
+import { WEB_APP_BASE_URL } from '../../config/webApp';
 
 interface InquiryRelevance {
   _id: string;
@@ -176,7 +177,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <a
-          href="http://localhost:5173/admin"
+          href={`${WEB_APP_BASE_URL}/admin`}
           className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
         >
           <ArrowLeft className="h-4 w-4" />
