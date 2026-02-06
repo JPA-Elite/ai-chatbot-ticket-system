@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import InquiryRelevance from '../models/InquiryRelevance.js';
 import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
+import { buildUpdatedInquiryMatchMessages } from '../services/openaiPrompts.js';
 import { computeTokenOverlap, createChatCompletion, normalizeInquiryText } from '../utils/utils.js';
 import {
   ASSIGNMENT_INTENT_REGEX,
@@ -139,26 +140,7 @@ const findUpdatedInquiryOverride = async (message = "") => {
     model: process.env.CHATGPT_MODEL,
     temperature: 0,
     response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'system',
-        content: [
-          'You compare a new user message with prior inquiry relevance records.',
-          'Select the single best matching record if it has the same intent.',
-          'If there is no clear match, respond with isMatch=false.',
-          'Return JSON: {"isMatch": boolean, "matchIndex": number|null}.'
-        ].join(' ')
-      },
-      {
-        role: 'user',
-        content: [
-          `User message: ${message}`,
-          '',
-          'Updated inquiry relevance records:',
-          formattedEntries
-        ].join('\n')
-      }
-    ]
+    messages: buildUpdatedInquiryMatchMessages(message, formattedEntries)
   });
 
   const content = response.choices?.[0]?.message?.content || '';

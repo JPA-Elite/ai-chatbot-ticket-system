@@ -119,3 +119,26 @@ Assistant response:
     }
   ];
 }
+
+export function buildUpdatedInquiryMatchMessages(message = "", formattedEntries = "") {
+  return [
+    {
+      role: 'system',
+      content: [
+        'You compare a new user message with prior inquiry relevance records.',
+        'Select the single best matching record if it has the same intent.',
+        'If there is no clear match, respond with isMatch=false.',
+        'Return JSON: {"isMatch": boolean, "matchIndex": number|null}.'
+      ].join(' ')
+    },
+    {
+      role: 'user',
+      content: [
+        `User message: ${message}`,
+        '',
+        'Updated inquiry relevance records:',
+        formattedEntries
+      ].join('\n')
+    }
+  ];
+}
