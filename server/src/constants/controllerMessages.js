@@ -1,0 +1,42 @@
+export const SERVER_ERROR_MESSAGE = 'Server error';
+export const SERVER_ERROR_WITH_DETAILS = (error) => `Server error: ${error.message}`;
+export const EMAIL_ALREADY_REGISTERED_MESSAGE = 'Email already registered';
+export const EMAIL_ALREADY_IN_USE_MESSAGE = 'Email already in use by another user';
+export const PROVIDE_EMAIL_PASSWORD_MESSAGE = 'Please provide email and password';
+export const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials';
+export const INQUIRY_MEMBER_NOT_FOUND_MESSAGE = 'Inquiry member not found';
+export const PROMPT_QUESTION_EXISTS_MESSAGE = 'Prompt question already exists';
+export const PROMPT_QUESTION_REQUIRED_MESSAGE = 'Prompt question is required';
+export const INQUIRY_MEMBER_DELETED_MESSAGE = 'Inquiry member deleted';
+export const NO_FILE_UPLOADED_MESSAGE = 'No file uploaded';
+export const UNSUPPORTED_FILE_TYPE_MESSAGE = 'Unsupported file type';
+export const FILE_IMPORT_SERVER_ERROR_MESSAGE = 'Server error during file import';
+export const FILE_IMPORT_DUPLICATE_MESSAGE = 'File Import Failed: Duplicate inquiry found';
+export const FILE_EXCEEDS_CHAR_LIMIT_MESSAGE = (maxChars) =>
+  `File exceeds ${maxChars.toLocaleString()} character limit`;
+export const INQUIRY_RELEVANCE_NOT_FOUND_MESSAGE = 'Inquiry relevance entry not found';
+export const IS_RELEVANT_REQUIRED_MESSAGE = 'isRelevant is required';
+export const RELEVANCE_UPDATED_MESSAGE = 'Relevance updated for all matching inquiries';
+export const INSUFFICIENT_METRICS_DATA_MESSAGE = 'Insufficient data to compute metrics';
+export const METRICS_FETCH_FAILED_MESSAGE = 'Failed to fetch metrics';
+export const STAFF_MEMBER_NOT_FOUND_MESSAGE = 'Staff member not found';
+export const CANNOT_DELETE_LAST_ADMIN_MESSAGE = 'Cannot delete the last admin user';
+export const STAFF_MEMBER_DELETED_MESSAGE = 'Staff member deleted successfully';
+export const CHAT_NOT_FOUND_MESSAGE = 'Chat not found';
+export const CHAT_NOT_AUTHORIZED_MESSAGE = 'Not authorized to access this chat';
+export const CHAT_PROCESSING_ERROR_MESSAGE = 'Error processing chat message';
+export const ALL_CHATS_DELETED_MESSAGE = 'All chats deleted successfully';
+export const CHAT_SELECT_NUMBER_MESSAGE = (max) => `Please reply with a number from 1 to ${max}.`;
+export const CHAT_MULTIPLE_STAFF_MATCHED_MESSAGE = (max) =>
+  `Multiple staff matched. Please reply with a number from 1 to ${max}.`;
+export const SUPPORT_REQUEST_TITLE = 'Support request';
+export const TICKET_NOT_FOUND_MESSAGE = 'Ticket not found';
+export const TICKET_ACCESS_NOT_AUTHORIZED_MESSAGE = 'Not authorized to access this ticket';
+export const TICKET_UPDATE_NOT_AUTHORIZED_MESSAGE = 'Not authorized to update tickets';
+export const MESSAGE_CONTENT_REQUIRED_MESSAGE = 'Message content is required';
+export const TICKET_ADD_MESSAGE_NOT_AUTHORIZED_MESSAGE = 'Not authorized to add messages to this ticket';
+export const TICKET_CLASSIFY_NOT_AUTHORIZED_MESSAGE = 'Not authorized to classify tickets';
+export const TICKET_ALREADY_ACCEPTED_MESSAGE = 'This ticket has already been accepted by another staff member';
+export const TICKET_ACCEPT_NOT_AUTHORIZED_MESSAGE =
+  'Not authorized to accept this ticket (tag not assigned to your account)';
+export const TICKET_END_CONVERSATION_NOT_AUTHORIZED_MESSAGE = 'Not authorized to end conversation';

@@ -4,6 +4,21 @@ import { createEmbedding, preprocessText, generateInquiriesAI } from '../service
 import { MAX_CHARS } from '../constants/constants.js';
 import textract from 'textract';
 import { escapeRegex } from '../utils/utils.js';
+import {
+  FILE_EXCEEDS_CHAR_LIMIT_MESSAGE,
+  FILE_IMPORT_DUPLICATE_MESSAGE,
+  FILE_IMPORT_SERVER_ERROR_MESSAGE,
+  INQUIRY_MEMBER_DELETED_MESSAGE,
+  INQUIRY_MEMBER_NOT_FOUND_MESSAGE,
+  INQUIRY_RELEVANCE_NOT_FOUND_MESSAGE,
+  IS_RELEVANT_REQUIRED_MESSAGE,
+  NO_FILE_UPLOADED_MESSAGE,
+  PROMPT_QUESTION_EXISTS_MESSAGE,
+  PROMPT_QUESTION_REQUIRED_MESSAGE,
+  RELEVANCE_UPDATED_MESSAGE,
+  SERVER_ERROR_MESSAGE,
+  UNSUPPORTED_FILE_TYPE_MESSAGE
+} from '../constants/controllerMessages.js';
 // @desc    Get all inquiries with pagination & search
 // @route   GET /api/inquiry
 // @access  Private/Admin
@@ -38,7 +53,7 @@ export const getAllInquiry = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: SERVER_ERROR_MESSAGE });
   }
 };
 
@@ -53,7 +68,7 @@ export const getInquiryById = async (req, res) => {
     if (!inquiry) {
       return res.status(404).json({
         success: false,
-        message: 'Inquiry member not found'
+        message: INQUIRY_MEMBER_NOT_FOUND_MESSAGE
       });
     }
 
@@ -65,7 +80,7 @@ export const getInquiryById = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -80,7 +95,7 @@ export const updateInquiry = async (req, res) => {
     if (!inquiry) {
       return res.status(404).json({
         success: false,
-        message: 'Inquiry member not found',
+        message: INQUIRY_MEMBER_NOT_FOUND_MESSAGE,
       });
     }
 
@@ -102,7 +117,7 @@ export const updateInquiry = async (req, res) => {
         if (existing) {
           return res.status(409).json({
             success: false,
-            message: 'Prompt question already exists',
+            message: PROMPT_QUESTION_EXISTS_MESSAGE,
           });
         }
 
@@ -136,13 +151,13 @@ export const updateInquiry = async (req, res) => {
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'Prompt question already exists',
+        message: PROMPT_QUESTION_EXISTS_MESSAGE,
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: SERVER_ERROR_MESSAGE,
     });
   }
 };
@@ -157,7 +172,7 @@ export const createInquiry = async (req, res) => {
     if (!promptQuestion) {
       return res.status(400).json({
         success: false,
-        message: 'Prompt question is required',
+        message: PROMPT_QUESTION_REQUIRED_MESSAGE,
       });
     }
 
@@ -172,7 +187,7 @@ export const createInquiry = async (req, res) => {
     if (existing) {
       return res.status(409).json({
         success: false,
-        message: 'Prompt question already exists',
+        message: PROMPT_QUESTION_EXISTS_MESSAGE,
       });
     }
 
@@ -201,13 +216,13 @@ export const createInquiry = async (req, res) => {
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: 'Prompt question already exists',
+        message: PROMPT_QUESTION_EXISTS_MESSAGE,
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: SERVER_ERROR_MESSAGE,
     });
   }
 };
@@ -222,7 +237,7 @@ export const deleteInquiry = async (req, res) => {
     if (!inquiry) {
       return res.status(404).json({
         success: false,
-        message: 'Inquiry member not found'
+        message: INQUIRY_MEMBER_NOT_FOUND_MESSAGE
       });
     }
 
@@ -230,13 +245,13 @@ export const deleteInquiry = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Inquiry member deleted'
+      message: INQUIRY_MEMBER_DELETED_MESSAGE
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -246,7 +261,7 @@ export const importInquiryFile = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No file uploaded',
+        message: NO_FILE_UPLOADED_MESSAGE,
       });
     }
 
@@ -256,7 +271,7 @@ export const importInquiryFile = async (req, res) => {
     if (!allowedExtensions.includes(ext)) {
       return res.status(400).json({
         success: false,
-        message: 'Unsupported file type',
+        message: UNSUPPORTED_FILE_TYPE_MESSAGE,
       });
     }
 
@@ -278,7 +293,7 @@ export const importInquiryFile = async (req, res) => {
     if (text.length > MAX_CHARS) {
       return res.status(400).json({
         success: false,
-        message: `File exceeds ${MAX_CHARS.toLocaleString()} character limit`,
+        message: FILE_EXCEEDS_CHAR_LIMIT_MESSAGE(MAX_CHARS),
       });
     }
 
@@ -309,9 +324,9 @@ export const importInquiryFile = async (req, res) => {
       inquiries,
     });
   } catch (error) {
-    let message = 'Server error during file import';
+    let message = FILE_IMPORT_SERVER_ERROR_MESSAGE;
     if (error.message.includes('E11000')) {
-      message = 'File Import Failed: Duplicate inquiry found';
+      message = FILE_IMPORT_DUPLICATE_MESSAGE;
     }
 
     console.error(error);
@@ -439,7 +454,7 @@ export const getAllInquiryRelevance = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: SERVER_ERROR_MESSAGE,
     });
   }
 }
@@ -454,7 +469,7 @@ export const getInquiryRelevanceById = async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Inquiry relevance entry not found'
+        message: INQUIRY_RELEVANCE_NOT_FOUND_MESSAGE
       });
     }
 
@@ -466,7 +481,7 @@ export const getInquiryRelevanceById = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -481,7 +496,7 @@ export const updateInquiryRelevance = async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Inquiry relevance entry not found',
+        message: INQUIRY_RELEVANCE_NOT_FOUND_MESSAGE,
       });
     }
 
@@ -490,7 +505,7 @@ export const updateInquiryRelevance = async (req, res) => {
     if (isRelevant === undefined) {
       return res.status(400).json({
         success: false,
-        message: 'isRelevant is required',
+        message: IS_RELEVANT_REQUIRED_MESSAGE,
       });
     }
 
@@ -511,13 +526,13 @@ export const updateInquiryRelevance = async (req, res) => {
     res.status(200).json({
       success: true,
       updatedCount: result.modifiedCount,
-      message: 'Relevance updated for all matching inquiries',
+      message: RELEVANCE_UPDATED_MESSAGE,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: SERVER_ERROR_MESSAGE,
     });
   }
 };

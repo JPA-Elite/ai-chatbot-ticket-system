@@ -1,5 +1,9 @@
 import InquiryRelevance from '../models/InquiryRelevance.js';
 import axios from 'axios';
+import {
+    INSUFFICIENT_METRICS_DATA_MESSAGE,
+    METRICS_FETCH_FAILED_MESSAGE
+} from '../constants/controllerMessages.js';
 
 // ---------------- Python API Controllers ---------------- //
 
@@ -13,7 +17,7 @@ export const fetchMetrics = async (req, res) => {
         if (!relevanceData || relevanceData.length < 2) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Insufficient data to compute metrics',
+                message: INSUFFICIENT_METRICS_DATA_MESSAGE,
             });
         }
 
@@ -58,7 +62,7 @@ export const fetchMetrics = async (req, res) => {
         return res.status(500).json({
             status: error,
             metrics: {},
-            message: 'Failed to fetch metrics',
+            message: METRICS_FETCH_FAILED_MESSAGE,
         });
     }
 };

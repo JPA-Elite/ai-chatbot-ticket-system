@@ -1,6 +1,18 @@
 import Ticket from '../models/Ticket.js';
 import { classifyTicket } from '../services/aiService.js';
 import { sendTicketCreatedToStaff, sendTicketAcceptedToStudent } from '../services/emailService.js';
+import {
+  MESSAGE_CONTENT_REQUIRED_MESSAGE,
+  SERVER_ERROR_MESSAGE,
+  TICKET_ACCEPT_NOT_AUTHORIZED_MESSAGE,
+  TICKET_ACCESS_NOT_AUTHORIZED_MESSAGE,
+  TICKET_ALREADY_ACCEPTED_MESSAGE,
+  TICKET_CLASSIFY_NOT_AUTHORIZED_MESSAGE,
+  TICKET_END_CONVERSATION_NOT_AUTHORIZED_MESSAGE,
+  TICKET_NOT_FOUND_MESSAGE,
+  TICKET_UPDATE_NOT_AUTHORIZED_MESSAGE,
+  TICKET_ADD_MESSAGE_NOT_AUTHORIZED_MESSAGE
+} from '../constants/controllerMessages.js';
 
 // @desc    Get all tickets (admin only)
 // @route   GET /api/tickets
@@ -59,7 +71,7 @@ export const getAllTickets = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -83,7 +95,7 @@ export const getUserTickets = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -105,7 +117,7 @@ export const getTicketById = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket not found'
+        message: TICKET_NOT_FOUND_MESSAGE
       });
     }
 
@@ -116,7 +128,7 @@ export const getTicketById = async (req, res) => {
     if (!isOwner && !isStaff && !isAssigned) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to access this ticket'
+        message: TICKET_ACCESS_NOT_AUTHORIZED_MESSAGE
       });
     }
 
@@ -128,7 +140,7 @@ export const getTicketById = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -145,7 +157,7 @@ export const updateTicket = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket not found'
+        message: TICKET_NOT_FOUND_MESSAGE
       });
     }
 
@@ -153,7 +165,7 @@ export const updateTicket = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to update tickets'
+        message: TICKET_UPDATE_NOT_AUTHORIZED_MESSAGE
       });
     }
 
@@ -178,7 +190,7 @@ export const updateTicket = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -193,7 +205,7 @@ export const addTicketMessage = async (req, res) => {
     if (!content) {
       return res.status(400).json({
         success: false,
-        message: 'Message content is required'
+        message: MESSAGE_CONTENT_REQUIRED_MESSAGE
       });
     }
 
@@ -202,7 +214,7 @@ export const addTicketMessage = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket not found'
+        message: TICKET_NOT_FOUND_MESSAGE
       });
     }
 
@@ -213,7 +225,7 @@ export const addTicketMessage = async (req, res) => {
     if (!isOwner && !isStaff && !isAssigned) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to add messages to this ticket'
+        message: TICKET_ADD_MESSAGE_NOT_AUTHORIZED_MESSAGE
       });
     }
 
@@ -245,7 +257,7 @@ export const addTicketMessage = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -264,14 +276,14 @@ export const classifyTicketAI = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket not found'
+        message: TICKET_NOT_FOUND_MESSAGE
       });
     }
 
     if (req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to classify tickets'
+        message: TICKET_CLASSIFY_NOT_AUTHORIZED_MESSAGE
       });
     }
 
@@ -296,7 +308,7 @@ export const classifyTicketAI = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -308,14 +320,14 @@ export const acceptTicket = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket not found'
+        message: TICKET_NOT_FOUND_MESSAGE
       });
     }
 
     if (ticket.status !== 'pending') {
       return res.status(400).json({
         success: false,
-        message: 'This ticket has already been accepted by another staff member'
+        message: TICKET_ALREADY_ACCEPTED_MESSAGE
       });
     }
 
@@ -330,7 +342,7 @@ export const acceptTicket = async (req, res) => {
       if (!allowed) {
         return res.status(403).json({
           success: false,
-          message: 'Not authorized to accept this ticket (tag not assigned to your account)'
+          message: TICKET_ACCEPT_NOT_AUTHORIZED_MESSAGE
         });
       }
     }
@@ -370,7 +382,7 @@ export const acceptTicket = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -382,14 +394,14 @@ export const endConversation = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: 'Ticket not found'
+        message: TICKET_NOT_FOUND_MESSAGE
       });
     }
 
     if (req.user.role !== 'admin' && req.user.role !== 'staff') {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to end conversation'
+        message: TICKET_END_CONVERSATION_NOT_AUTHORIZED_MESSAGE
       });
     }
 
@@ -414,7 +426,7 @@ export const endConversation = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };

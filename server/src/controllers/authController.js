@@ -1,5 +1,11 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import {
+  EMAIL_ALREADY_REGISTERED_MESSAGE,
+  INVALID_CREDENTIALS_MESSAGE,
+  PROVIDE_EMAIL_PASSWORD_MESSAGE,
+  SERVER_ERROR_MESSAGE
+} from '../constants/controllerMessages.js';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -12,7 +18,7 @@ export const register = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ success: false, message: 'Email already registered' });
+      return res.status(400).json({ success: false, message: EMAIL_ALREADY_REGISTERED_MESSAGE });
     }
 
     // Create user
@@ -39,7 +45,7 @@ export const register = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -55,7 +61,7 @@ export const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password'
+        message: PROVIDE_EMAIL_PASSWORD_MESSAGE
       });
     }
 
@@ -65,7 +71,7 @@ export const login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: INVALID_CREDENTIALS_MESSAGE
       });
     }
 
@@ -75,7 +81,7 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: INVALID_CREDENTIALS_MESSAGE
       });
     }
 
@@ -96,7 +102,7 @@ export const login = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -121,7 +127,7 @@ export const getMe = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };

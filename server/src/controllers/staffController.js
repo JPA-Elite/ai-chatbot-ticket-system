@@ -1,5 +1,14 @@
 import User from '../models/User.js';
 import Ticket from '../models/Ticket.js';
+import {
+  CANNOT_DELETE_LAST_ADMIN_MESSAGE,
+  EMAIL_ALREADY_IN_USE_MESSAGE,
+  EMAIL_ALREADY_REGISTERED_MESSAGE,
+  SERVER_ERROR_MESSAGE,
+  SERVER_ERROR_WITH_DETAILS,
+  STAFF_MEMBER_DELETED_MESSAGE,
+  STAFF_MEMBER_NOT_FOUND_MESSAGE
+} from '../constants/controllerMessages.js';
 
 // @desc    Get all staff members with statistics
 // @route   GET /api/staff
@@ -70,7 +79,7 @@ export const getAllStaff = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error: ' + error.message
+      message: SERVER_ERROR_WITH_DETAILS(error)
     });
   }
 };
@@ -85,7 +94,7 @@ export const getStaffById = async (req, res) => {
     if (!staff) {
       return res.status(404).json({
         success: false,
-        message: 'Staff member not found'
+        message: STAFF_MEMBER_NOT_FOUND_MESSAGE
       });
     }
 
@@ -126,7 +135,7 @@ export const getStaffById = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -143,7 +152,7 @@ export const updateStaff = async (req, res) => {
     if (!staff) {
       return res.status(404).json({
         success: false,
-        message: 'Staff member not found'
+        message: STAFF_MEMBER_NOT_FOUND_MESSAGE
       });
     }
 
@@ -153,7 +162,7 @@ export const updateStaff = async (req, res) => {
       if (emailExists) {
         return res.status(400).json({
           success: false,
-          message: 'Email already in use by another user'
+          message: EMAIL_ALREADY_IN_USE_MESSAGE
         });
       }
     }
@@ -181,7 +190,7 @@ export const updateStaff = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -199,7 +208,7 @@ export const createStaff = async (req, res) => {
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: 'Email already registered'
+        message: EMAIL_ALREADY_REGISTERED_MESSAGE
       });
     }
 
@@ -232,7 +241,7 @@ export const createStaff = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -247,7 +256,7 @@ export const deleteStaff = async (req, res) => {
     if (!staff) {
       return res.status(404).json({
         success: false,
-        message: 'Staff member not found'
+        message: STAFF_MEMBER_NOT_FOUND_MESSAGE
       });
     }
 
@@ -257,7 +266,7 @@ export const deleteStaff = async (req, res) => {
       if (adminCount <= 1) {
         return res.status(400).json({
           success: false,
-          message: 'Cannot delete the last admin user'
+          message: CANNOT_DELETE_LAST_ADMIN_MESSAGE
         });
       }
     }
@@ -272,13 +281,13 @@ export const deleteStaff = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Staff member deleted successfully'
+      message: STAFF_MEMBER_DELETED_MESSAGE
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -364,7 +373,7 @@ export const getMyStats = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };

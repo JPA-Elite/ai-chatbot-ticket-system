@@ -7,6 +7,16 @@ import { sendTicketCreatedToStaff } from '../services/emailService.js';
 import { buildUpdatedInquiryMatchMessages } from '../services/openaiPrompts.js';
 import { computeTokenOverlap, createChatCompletion, normalizeInquiryText } from '../utils/utils.js';
 import {
+  ALL_CHATS_DELETED_MESSAGE,
+  CHAT_MULTIPLE_STAFF_MATCHED_MESSAGE,
+  CHAT_NOT_AUTHORIZED_MESSAGE,
+  CHAT_NOT_FOUND_MESSAGE,
+  CHAT_PROCESSING_ERROR_MESSAGE,
+  CHAT_SELECT_NUMBER_MESSAGE,
+  SERVER_ERROR_MESSAGE,
+  SUPPORT_REQUEST_TITLE
+} from '../constants/controllerMessages.js';
+import {
   ASSIGNMENT_INTENT_REGEX,
   CHAT_HISTORY_CONTENT_LIMIT,
   CHAT_HISTORY_WINDOW,
@@ -182,7 +192,7 @@ export const sendMessage = async (req, res) => {
       if (!chat) {
         return res.status(404).json({
           success: false,
-          message: 'Chat not found'
+          message: CHAT_NOT_FOUND_MESSAGE
         });
       }
 
@@ -190,7 +200,7 @@ export const sendMessage = async (req, res) => {
       if (chat.userId.toString() !== userId) {
         return res.status(403).json({
           success: false,
-          message: 'Not authorized to access this chat'
+          message: CHAT_NOT_AUTHORIZED_MESSAGE
         });
       }
     } else {
@@ -392,7 +402,7 @@ export const sendMessage = async (req, res) => {
       chat.escalatedToTicket = true;
       escalated = true;
 
-      const titleBase = triggerUserMessage || "Support request";
+      const titleBase = triggerUserMessage || SUPPORT_REQUEST_TITLE;
       const safeTitle =
         titleBase.length > TICKET_TITLE_PREVIEW_LENGTH
           ? `${titleBase.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`
@@ -441,7 +451,7 @@ export const sendMessage = async (req, res) => {
         const choice = parseInt(selectionMatch[1], 10);
 
         if (!Number.isFinite(choice) || choice < 1 || choice > max) {
-          aiResponse = `Please reply with a number from 1 to ${max}.`;
+          aiResponse = CHAT_SELECT_NUMBER_MESSAGE(max);
         } else {
           const selectedStaff = staffList[choice - 1];
           const triggerUserMessage = extractLastTicketIntentMessage();
@@ -465,7 +475,7 @@ export const sendMessage = async (req, res) => {
       const byText = selectStaffByText(staffList, message);
 
       if (byText.ambiguous) {
-        aiResponse = `Multiple staff matched. Please reply with a number from 1 to ${max}.`;
+        aiResponse = CHAT_MULTIPLE_STAFF_MATCHED_MESSAGE(max);
 
         chat.messages.push({
           role: "assistant",
@@ -589,7 +599,7 @@ export const sendMessage = async (req, res) => {
     console.error('Chat error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error processing chat message',
+      message: CHAT_PROCESSING_ERROR_MESSAGE,
       error: error.message
     });
   }
@@ -602,7 +612,7 @@ export const getChatById = async (req, res) => {
     if (!chat) {
       return res.status(404).json({
         success: false,
-        message: 'Chat not found'
+        message: CHAT_NOT_FOUND_MESSAGE
       });
     }
 
@@ -610,7 +620,7 @@ export const getChatById = async (req, res) => {
     if (chat.userId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to access this chat'
+        message: CHAT_NOT_AUTHORIZED_MESSAGE
       });
     }
 
@@ -622,7 +632,7 @@ export const getChatById = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -641,7 +651,7 @@ export const getUserChats = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: SERVER_ERROR_MESSAGE
     });
   }
 };
@@ -654,14 +664,14 @@ export const deleteAllChats = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'All chats deleted successfully',
+      message: ALL_CHATS_DELETED_MESSAGE,
       deletedCount: result.deletedCount
     });
   } catch (error) {
     console.error('Delete all chats error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: SERVER_ERROR_MESSAGE,
       error: error.message
     });
   }
