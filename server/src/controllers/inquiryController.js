@@ -344,13 +344,16 @@ export const getAllInquiryRelevance = async (req, res) => {
     Build match conditions
     ----------------------------- */
     const matchStage = {};
+    const andConditions = [];
 
     // 🔍 Search filter
     if (search) {
-      matchStage.$or = [
-        { userInquiry: { $regex: escapeRegex(search), $options: 'i' } },
-        { generatedInquiry: { $regex: escapeRegex(search), $options: 'i' } },
-      ];
+      andConditions.push({
+        $or: [
+          { userInquiry: { $regex: escapeRegex(search), $options: 'i' } },
+          { generatedInquiry: { $regex: escapeRegex(search), $options: 'i' } },
+        ],
+      });
     }
 
     // ✅ Relevance filter
@@ -364,7 +367,16 @@ export const getAllInquiryRelevance = async (req, res) => {
     if (updated === 'updated') {
       matchStage.isUpdated = true;
     } else if (updated === 'not_updated') {
-      matchStage.isUpdated = false;
+      andConditions.push({
+        $or: [
+          { isUpdated: false },
+          { isUpdated: { $exists: false } },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      matchStage.$and = andConditions;
     }
 
     /* -----------------------------
