@@ -31,6 +31,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
     isRelevant: number;
   } | null>(null);
   const [relevanceFilter, setRelevanceFilter] = useState<'all' | 'relevant' | 'not_relevant'>('all');
+  const [updatedFilter, setUpdatedFilter] = useState<'all' | 'updated' | 'not_updated'>('all');
 
   const { token } = useAuth();
 
@@ -43,7 +44,8 @@ const InquiryRelevanceDashboard: React.FC = () => {
   const fetchInquiries = async (page = 1,
     search = '',
     limit = perPage,
-    relevance = relevanceFilter
+    relevance = relevanceFilter,
+    updated = updatedFilter
   ) => {
     try {
       setLoading(true);
@@ -51,7 +53,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
 
       const res = await axios.get('http://localhost:5000/api/inquiry-relevance', {
         headers: { Authorization: `Bearer ${token}` },
-        params: { page, limit, search, relevance },
+        params: { page, limit, search, relevance, updated },
       });
 
       if (res.data.success) {
@@ -195,7 +197,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
                 const value = Number(e.target.value);
                 setPerPage(value);
                 setCurrentPage(1);
-                fetchInquiries(1, searchQuery, value, relevanceFilter);
+                fetchInquiries(1, searchQuery, value, relevanceFilter, updatedFilter);
               }}
               className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
@@ -216,13 +218,32 @@ const InquiryRelevanceDashboard: React.FC = () => {
                 const value = e.target.value as 'all' | 'relevant' | 'not_relevant';
                 setRelevanceFilter(value);
                 setCurrentPage(1);
-                fetchInquiries(1, searchQuery, perPage, value);
+                fetchInquiries(1, searchQuery, perPage, value, updatedFilter);
               }}
               className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="all">All</option>
               <option value="relevant">Relevant</option>
               <option value="not_relevant">Not Relevant</option>
+            </select>
+          </div>
+
+          {/* Updated Filter */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600">Updated</label>
+            <select
+              value={updatedFilter}
+              onChange={e => {
+                const value = e.target.value as 'all' | 'updated' | 'not_updated';
+                setUpdatedFilter(value);
+                setCurrentPage(1);
+                fetchInquiries(1, searchQuery, perPage, relevanceFilter, value);
+              }}
+              className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="all">All</option>
+              <option value="updated">Updated</option>
+              <option value="not_updated">Not Updated</option>
             </select>
           </div>
         </div>
@@ -238,7 +259,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 setCurrentPage(1);
-                fetchInquiries(1, searchQuery, perPage, relevanceFilter);
+                fetchInquiries(1, searchQuery, perPage, relevanceFilter, updatedFilter);
               }
             }}
             className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -246,7 +267,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
           <button
             onClick={() => {
               setCurrentPage(1);
-              fetchInquiries(1, searchQuery, perPage, relevanceFilter);
+              fetchInquiries(1, searchQuery, perPage, relevanceFilter, updatedFilter);
             }}
             className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
           >

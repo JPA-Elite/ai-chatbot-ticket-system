@@ -334,6 +334,7 @@ export const getAllInquiryRelevance = async (req, res) => {
       limit = 5,
       search = '',
       relevance = 'all',
+      updated = 'all',
     } = req.query;
 
     page = parseInt(page);
@@ -357,6 +358,13 @@ export const getAllInquiryRelevance = async (req, res) => {
       matchStage.isRelevant = 1;
     } else if (relevance === 'not_relevant') {
       matchStage.isRelevant = 0;
+    }
+
+    // ✅ Updated filter
+    if (updated === 'updated') {
+      matchStage.isUpdated = true;
+    } else if (updated === 'not_updated') {
+      matchStage.isUpdated = false;
     }
 
     /* -----------------------------
