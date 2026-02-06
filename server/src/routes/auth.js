@@ -5,15 +5,16 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const authRateLimitEnabled = process.env.AUTH_RATE_LIMIT_ENABLED !== 'false';
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 100,
   skipSuccessfulRequests: true,
   message: 'Too many failed login attempts, please try again later'
 });
 
 router.post('/register', register);
-router.post('/login', loginLimiter, login);
+router.post('/login', authRateLimitEnabled ? loginLimiter : (req, res, next) => next(), login);
 router.get('/me', protect, getMe);
 
 export default router;

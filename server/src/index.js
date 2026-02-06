@@ -35,9 +35,10 @@ const io = new Server(server, {
 });
 
 // Rate limiting
+const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false';
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: Number(process.env.RATE_LIMIT_MAX) || 100, // limit each IP to 100 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -47,7 +48,9 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(helmet());
-app.use(limiter);
+if (rateLimitEnabled) {
+  app.use(limiter);
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
