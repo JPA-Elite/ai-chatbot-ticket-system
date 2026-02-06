@@ -84,7 +84,7 @@ This version includes mock AI responses so you can test the application without 
    - Backend API: http://localhost:5000 (or set `VITE_API_BASE_URL`)
    - Python API: http://127.0.0.1:8000 (or set `PYTHON_API_BASE_URL`)
    - Web app URL: http://localhost:5173 (or set `WEB_APP_BASE_URL`)
-   - Rate limit config: `RATE_LIMIT_*` and `AUTH_RATE_LIMIT_*` in `.env`
+   - Rate limit config: `RATE_LIMIT_*` and `AUTH_RATE_LIMIT_*` in `.env` (disabled by default in non-production)
 
 ## Testing the Mock AI
 

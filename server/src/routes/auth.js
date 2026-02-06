@@ -5,7 +5,9 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const authRateLimitEnabled = process.env.AUTH_RATE_LIMIT_ENABLED !== 'false';
+const authRateLimitEnabled = process.env.NODE_ENV === 'production'
+  ? process.env.AUTH_RATE_LIMIT_ENABLED !== 'false'
+  : process.env.AUTH_RATE_LIMIT_ENABLED === 'true';
 const loginLimiter = rateLimit({
   windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 100,
