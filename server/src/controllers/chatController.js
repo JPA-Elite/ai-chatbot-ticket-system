@@ -1,6 +1,8 @@
 import Chat from '../models/Chat.js';
 import Ticket from '../models/Ticket.js';
 import User from '../models/User.js';
+import InquiryRelevance from '../models/InquiryRelevance.js';
+import openai from '../config/openaiClient.js';
 import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
 import {
@@ -24,6 +26,7 @@ import {
   STAFF_SELECTION_MAX_RESULTS,
   STAFF_TAG_DEFAULT,
   TAG_MATCH_STOP_WORDS,
+  RESPOND_TO_ESCALATION_MSG,
   TICKET_DESCRIPTION_TEMPLATE,
   TICKET_TITLE_PREVIEW_LENGTH
 } from '../constants/constants.js';
@@ -83,6 +86,75 @@ const formatStaffSelectionMessage = (staffList = []) => {
     '',
     STAFF_SELECTION_EXAMPLE_REPLY
   ].join('\n');
+};
+
+const findUpdatedInquiryOverride = async (message = "") => {
+  const updatedEntries = await InquiryRelevance.find({ isUpdated: true })
+    .select('userInquiry generatedInquiry generatedResponse isRelevant createdAt')
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+
+  if (!updatedEntries.length) {
+    return null;
+  }
+
+  const formattedEntries = updatedEntries
+    .map((entry, index) => ([
+      `${index + 1}.`,
+      `userInquiry: ${entry.userInquiry}`,
+      `generatedInquiry: ${entry.generatedInquiry}`,
+      `generatedResponse: ${entry.generatedResponse}`,
+      `isRelevant: ${entry.isRelevant}`
+    ].join('\n')))
+    .join('\n\n');
+
+  const response = await openai.chat.completions.create({
+    model: process.env.CHATGPT_MODEL,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: [
+          'You compare a new user message with prior inquiry relevance records.',
+          'Select the single best matching record if it has the same intent.',
+          'If there is no clear match, respond with isMatch=false.',
+          'Return JSON: {"isMatch": boolean, "matchIndex": number|null}.'
+        ].join(' ')
+      },
+      {
+        role: 'user',
+        content: [
+          `User message: ${message}`,
+          '',
+          'Updated inquiry relevance records:',
+          formattedEntries
+        ].join('\n')
+      }
+    ]
+  });
+
+  const content = response.choices?.[0]?.message?.content || '';
+  let parsed;
+
+  try {
+    parsed = JSON.parse(content);
+  } catch (error) {
+    console.error('Failed to parse updated inquiry match response:', error);
+    return null;
+  }
+
+  if (!parsed?.isMatch || typeof parsed.matchIndex !== 'number') {
+    return null;
+  }
+
+  const matchIndex = parsed.matchIndex - 1;
+  if (matchIndex < 0 || matchIndex >= updatedEntries.length) {
+    return null;
+  }
+
+  return updatedEntries[matchIndex];
 };
 
 // @desc    Start or continue a chat session
@@ -420,61 +492,71 @@ export const sendMessage = async (req, res) => {
       }
     }
 
-    const analyzeResult = await analyzeConversation(chatHistory, message);
+    const updatedInquiryMatch = await findUpdatedInquiryOverride(message);
 
-    if (analyzeResult === true) {
-      const studentText = normalize(message);
-      const staffList = await getActiveStaffWithTags();
-      const best = findBestStaffMatch(staffList, studentText);
-
-      const assignmentIntent = ASSIGNMENT_INTENT_REGEX.test(message || "");
-      const shouldAutoCreateTicket = assignmentIntent || (best.staff && best.score >= 2 && best.hasMeaningfulMatch);
-
-      if (!shouldAutoCreateTicket) {
-        aiResponse = formatStaffSelectionMessage(staffList);
+    if (updatedInquiryMatch) {
+      if (updatedInquiryMatch.isRelevant === 0) {
+        aiResponse = RESPOND_TO_ESCALATION_MSG;
       } else {
-        aiResponse = ESCALATION_AUTO_TICKET_RESPONSE;
-        chat.escalatedToTicket = true;
-        escalated = true;
-
-        const ticket = await Ticket.create({
-          userId,
-          chatId: chat._id,
-          title: `${message.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`,
-          description: TICKET_DESCRIPTION_TEMPLATE(message, aiResponse),
-          category: DEFAULT_TICKET_CATEGORY,
-          priority: DEFAULT_TICKET_PRIORITY,
-          assignedTo: best.staff._id,
-          tag: best.tag || "",
-          status: DEFAULT_TICKET_STATUS
-        });
-
-        chat.ticketId = ticket._id;
-        ticketId = ticket._id;
-
-        try {
-          const student = await User.findById(userId).select('name email');
-
-          const matchedStaffEmail =
-            ticket.assignedTo
-              ? (await User.findById(ticket.assignedTo).select('email'))?.email
-              : null;
-
-          if (student) {
-            if (matchedStaffEmail) {
-              await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
-              console.log(`Ticket created and notification sent to assigned staff: ${matchedStaffEmail}`);
-            } else {
-              await sendTicketCreatedToStaff(ticket, student.name, student.email);
-              console.log('Ticket created but no specific staff assigned, notification sent to general staff inbox');
-            }
-          }
-        } catch (emailError) {
-          console.error('Error sending ticket notification email:', emailError);
-        }
+        aiResponse = updatedInquiryMatch.generatedResponse;
       }
     } else {
-      aiResponse = analyzeResult;
+      const analyzeResult = await analyzeConversation(chatHistory, message);
+
+      if (analyzeResult === true) {
+        const studentText = normalize(message);
+        const staffList = await getActiveStaffWithTags();
+        const best = findBestStaffMatch(staffList, studentText);
+
+        const assignmentIntent = ASSIGNMENT_INTENT_REGEX.test(message || "");
+        const shouldAutoCreateTicket = assignmentIntent || (best.staff && best.score >= 2 && best.hasMeaningfulMatch);
+
+        if (!shouldAutoCreateTicket) {
+          aiResponse = formatStaffSelectionMessage(staffList);
+        } else {
+          aiResponse = ESCALATION_AUTO_TICKET_RESPONSE;
+          chat.escalatedToTicket = true;
+          escalated = true;
+
+          const ticket = await Ticket.create({
+            userId,
+            chatId: chat._id,
+            title: `${message.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`,
+            description: TICKET_DESCRIPTION_TEMPLATE(message, aiResponse),
+            category: DEFAULT_TICKET_CATEGORY,
+            priority: DEFAULT_TICKET_PRIORITY,
+            assignedTo: best.staff._id,
+            tag: best.tag || "",
+            status: DEFAULT_TICKET_STATUS
+          });
+
+          chat.ticketId = ticket._id;
+          ticketId = ticket._id;
+
+          try {
+            const student = await User.findById(userId).select('name email');
+
+            const matchedStaffEmail =
+              ticket.assignedTo
+                ? (await User.findById(ticket.assignedTo).select('email'))?.email
+                : null;
+
+            if (student) {
+              if (matchedStaffEmail) {
+                await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+                console.log(`Ticket created and notification sent to assigned staff: ${matchedStaffEmail}`);
+              } else {
+                await sendTicketCreatedToStaff(ticket, student.name, student.email);
+                console.log('Ticket created but no specific staff assigned, notification sent to general staff inbox');
+              }
+            }
+          } catch (emailError) {
+            console.error('Error sending ticket notification email:', emailError);
+          }
+        }
+      } else {
+        aiResponse = analyzeResult;
+      }
     }
 
     // aiResponse = await matchResponseLanguage(message, aiResponse);
