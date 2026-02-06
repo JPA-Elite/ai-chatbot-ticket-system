@@ -4,7 +4,7 @@ import User from '../models/User.js';
 import InquiryRelevance from '../models/InquiryRelevance.js';
 import { analyzeConversation, matchResponseLanguage } from '../services/aiService.js';
 import { sendTicketCreatedToStaff } from '../services/emailService.js';
-import { createChatCompletion } from '../utils/utils.js';
+import { computeTokenOverlap, createChatCompletion, normalizeInquiryText } from '../utils/utils.js';
 import {
   ASSIGNMENT_INTENT_REGEX,
   CHAT_HISTORY_CONTENT_LIMIT,
@@ -86,28 +86,6 @@ const formatStaffSelectionMessage = (staffList = []) => {
     '',
     STAFF_SELECTION_EXAMPLE_REPLY
   ].join('\n');
-};
-
-const normalizeInquiryText = (value = "") =>
-  String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const computeTokenOverlap = (left = "", right = "") => {
-  const leftTokens = new Set(normalizeInquiryText(left).split(" ").filter(Boolean));
-  const rightTokens = new Set(normalizeInquiryText(right).split(" ").filter(Boolean));
-
-  if (!leftTokens.size || !rightTokens.size) return 0;
-
-  let intersection = 0;
-  for (const token of leftTokens) {
-    if (rightTokens.has(token)) intersection += 1;
-  }
-
-  const union = new Set([...leftTokens, ...rightTokens]);
-  return intersection / union.size;
 };
 
 const findUpdatedInquiryOverride = async (message = "") => {
