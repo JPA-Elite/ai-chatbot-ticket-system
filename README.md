@@ -124,7 +124,7 @@ and set their password to `TempPass123!` (hashed before storage).
 1. Ensure MongoDB is running and your server `.env` file is configured.
 2. Run the migration from the project root:
    ```bash
-   npm run server -- --migration=ticket-classifier
+   npm run dev:all --migration=ticket-classifier
    ```
 
 The migration will connect to MongoDB, upsert users in the `users` collection, and then exit without starting
