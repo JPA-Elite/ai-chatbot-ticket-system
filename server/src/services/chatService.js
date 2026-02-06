@@ -108,7 +108,6 @@ const findUpdatedInquiryOverride = async (message = "") => {
   const updatedEntries = await InquiryRelevance.find({ isUpdated: true })
     .select('userInquiry generatedInquiry generatedResponse isRelevant createdAt')
     .sort({ createdAt: -1 })
-    .limit(50)
     .lean();
 
   if (!updatedEntries.length) {
@@ -144,12 +143,12 @@ const findUpdatedInquiryOverride = async (message = "") => {
   const formattedEntries = updatedEntries
     .map((entry, index) => ([
       `${index + 1}.`,
-      `userInquiry: ${entry.userInquiry}`,
-      `generatedInquiry: ${entry.generatedInquiry}`,
-      `generatedResponse: ${entry.generatedResponse}`,
-      `isRelevant: ${entry.isRelevant}`
-    ].join('\n')))
-    .join('\n\n');
+      `userInquiry=${entry.userInquiry}`,
+      `generatedInquiry=${entry.generatedInquiry}`,
+      `generatedResponse=${entry.generatedResponse}`,
+      `isRelevant=${entry.isRelevant}`
+    ].join(' | ')))
+    .join('\n');
 
   const response = await createChatCompletion({
     model: process.env.CHATGPT_MODEL,

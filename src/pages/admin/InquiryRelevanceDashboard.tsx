@@ -5,8 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Modal from '../../components/modal/ui/Modal';
-import API_BASE_URL from '../../config/api';
-import { WEB_APP_BASE_URL } from '../../config/webApp';
+import API_BASE_URL, { WEB_APP_BASE_URL } from '../../config/api';
 
 interface InquiryRelevance {
   _id: string;
