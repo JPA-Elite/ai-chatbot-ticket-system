@@ -88,7 +88,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
     )
       .then(res => {
         if (res.data.success) {
-          toast.success('Inquiry updated successfully');
+          toast.success('Inquiry relevance updated successfully');
           setShowEvaluateModal(false);
           setEditInquiry(null);
           fetchInquiries();
