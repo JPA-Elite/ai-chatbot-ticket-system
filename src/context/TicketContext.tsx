@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import axios from "axios";
 import { useAuth } from "./AuthContext";
+import API_BASE_URL from "../config/api";
  
 interface TicketMessage {
   _id: string;
@@ -113,7 +114,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(true);
       setError(null);
 
-      const res = await axios.get("http://localhost:5000/api/tickets/user", {
+      const res = await axios.get(`${API_BASE_URL}/api/tickets/user`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -136,7 +137,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(true);
       setError(null);
 
-      let url = `http://localhost:5000/api/tickets?page=${page}&limit=${limit}`;
+      let url = `${API_BASE_URL}/api/tickets?page=${page}&limit=${limit}`;
       if (status) {
         url += `&status=${status}`;
       }
@@ -169,7 +170,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setLoading(true);
       setError(null);
 
-      const res = await axios.get(`http://localhost:5000/api/tickets/${id}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/tickets/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -194,7 +195,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setError(null);
 
       const res = await axios.put(
-        `http://localhost:5000/api/tickets/${id}`,
+        `${API_BASE_URL}/api/tickets/${id}`,
         data,
         {
           headers: {
@@ -230,7 +231,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setError(null);
 
       const res = await axios.post(
-        `http://localhost:5000/api/tickets/${id}/message`,
+        `${API_BASE_URL}/api/tickets/${id}/message`,
         { content },
         {
           headers: {
@@ -263,7 +264,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setError(null);
 
       const res = await axios.post(
-        `http://localhost:5000/api/tickets/${id}/classify`,
+        `${API_BASE_URL}/api/tickets/${id}/classify`,
         {},
         {
           headers: {
@@ -293,7 +294,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setError(null);
 
       const res = await axios.post(
-        `http://localhost:5000/api/tickets/${id}/accept`,
+        `${API_BASE_URL}/api/tickets/${id}/accept`,
         {},
         {
           headers: {
@@ -326,7 +327,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
       setError(null);
 
       const res = await axios.post(
-        `http://localhost:5000/api/tickets/${id}/end`,
+        `${API_BASE_URL}/api/tickets/${id}/end`,
         {},
         {
           headers: {

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Modal from '../../components/modal/ui/Modal';
+import API_BASE_URL from '../../config/api';
 
 interface InquiryRelevance {
   _id: string;
@@ -51,7 +52,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const res = await axios.get('http://localhost:5000/api/inquiry-relevance', {
+      const res = await axios.get(`${API_BASE_URL}/api/inquiry-relevance`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { page, limit, search, relevance, updated },
       });
@@ -76,7 +77,7 @@ const InquiryRelevanceDashboard: React.FC = () => {
     if (!editInquiry) return;
 
     axios.put(
-      `http://localhost:5000/api/inquiry-relevance/${editInquiry._id}`,
+      `${API_BASE_URL}/api/inquiry-relevance/${editInquiry._id}`,
       {
         userInquiry: editInquiry.userInquiry,
         generatedInquiry: editInquiry.generatedInquiry,

@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import API_BASE_URL from "../config/api";
 
 // Types
 interface User {
@@ -72,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           }
 
           // Token is valid, get user data
-          const res = await axios.get("http://localhost:5000/api/auth/me");
+          const res = await axios.get(`${API_BASE_URL}/api/auth/me`);
           setUser(res.data.data);
           setIsAuthenticated(true);
           setIsAdmin(res.data.data.role === "admin");
@@ -94,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Login user
   const login = async (email: string, password: string) => {
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
+      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         email,
         password,
       });
@@ -115,7 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Register user
   const register = async (name: string, email: string, password: string) => {
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", {
+      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         name,
         email,
         password,
