@@ -71,6 +71,7 @@ def ingest_training_data(payload: TrainingItem):
     records = load_training_data()
     trained, message = train_model(records)
 
+    print(f"Training status: {trained}, message: {message}")
     return {
         "status": "success",
         "trained": trained,
