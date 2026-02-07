@@ -33,6 +33,8 @@ export const findTicketByIdRaw = (id) => Ticket.findById(id);
 
 export const saveTicket = (ticket) => ticket.save();
 
+export const createTicket = (data) => Ticket.create(data);
+
 /** @type {TicketRepository} */
 export const ticketRepository = {
   findTickets,
@@ -41,5 +43,6 @@ export const ticketRepository = {
   findTicketById,
   findTicketByIdWithChat,
   findTicketByIdRaw,
-  saveTicket
+  saveTicket,
+  createTicket
 };

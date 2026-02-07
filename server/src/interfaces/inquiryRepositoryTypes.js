@@ -12,6 +12,8 @@
  * @property {(id: string) => Promise<import('mongoose').Document|null>} findInquiryRelevanceById
  * @property {(filter: Record<string, unknown>, update: Record<string, unknown>) => Promise<import('mongoose').UpdateWriteOpResult>} updateInquiryRelevanceMany
  * @property {(pipeline: Record<string, unknown>[]) => Promise<unknown[]>} aggregateInquiryRelevance
+ * @property {() => Promise<import('mongoose').Document[]>} findEnabledInquiries
+ * @property {(filter: Record<string, unknown>, options?: { select?: string, sort?: Record<string, unknown> }) => Promise<unknown[]>} findInquiryRelevanceEntries
  */
 
 export {};

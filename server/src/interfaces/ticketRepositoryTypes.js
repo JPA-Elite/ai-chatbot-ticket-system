@@ -7,6 +7,7 @@
  * @property {(id: string) => Promise<import('mongoose').Document|null>} findTicketByIdWithChat
  * @property {(id: string) => Promise<import('mongoose').Document|null>} findTicketByIdRaw
  * @property {(ticket: import('mongoose').Document) => Promise<import('mongoose').Document>} saveTicket
+ * @property {(data: Record<string, unknown>) => Promise<import('mongoose').Document>} createTicket
  */
 
 export {};

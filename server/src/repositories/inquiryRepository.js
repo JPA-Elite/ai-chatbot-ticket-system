@@ -32,6 +32,23 @@ export const updateInquiryRelevanceMany = (filter, update) =>
 export const aggregateInquiryRelevance = (pipeline) =>
   InquiryRelevance.aggregate(pipeline);
 
+export const findEnabledInquiries = () => Inquiry.find({ isEnabled: true });
+
+export const findInquiryRelevanceEntries = (filter, options = {}) => {
+  const { select, sort } = options;
+  const query = InquiryRelevance.find(filter);
+
+  if (select) {
+    query.select(select);
+  }
+
+  if (sort) {
+    query.sort(sort);
+  }
+
+  return query.lean();
+};
+
 /** @type {InquiryRepository} */
 export const inquiryRepository = {
   countInquiries,
@@ -45,5 +62,7 @@ export const inquiryRepository = {
   createInquiryRelevance,
   findInquiryRelevanceById,
   updateInquiryRelevanceMany,
-  aggregateInquiryRelevance
+  aggregateInquiryRelevance,
+  findEnabledInquiries,
+  findInquiryRelevanceEntries
 };

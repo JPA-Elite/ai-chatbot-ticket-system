@@ -11,6 +11,7 @@
  * @property {(staffId: string) => Promise<import('mongoose').Document[]>} findTicketsByAssignee
  * @property {(staffId: string) => Promise<import('mongoose').Document[]>} findTicketsByAssigneeWithUser
  * @property {(staffId: string) => Promise<import('mongoose').UpdateWriteOpResult>} unassignTickets
+ * @property {(filter: Record<string, unknown>, options?: { select?: string, sort?: Record<string, unknown> }) => Promise<import('mongoose').Document[]>} findStaffByFilter
  */
 
 export {};

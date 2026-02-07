@@ -29,6 +29,21 @@ export const findTicketsByAssigneeWithUser = (staffId) =>
 export const unassignTickets = (staffId) =>
   Ticket.updateMany({ assignedTo: staffId }, { $unset: { assignedTo: 1 } });
 
+export const findStaffByFilter = (filter, options = {}) => {
+  const { select, sort } = options;
+  const query = User.find(filter);
+
+  if (select) {
+    query.select(select);
+  }
+
+  if (sort) {
+    query.sort(sort);
+  }
+
+  return query;
+};
+
 /** @type {StaffRepository} */
 export const staffRepository = {
   findStaffMembers,
@@ -41,5 +56,6 @@ export const staffRepository = {
   deleteStaffById,
   findTicketsByAssignee,
   findTicketsByAssigneeWithUser,
-  unassignTickets
+  unassignTickets,
+  findStaffByFilter
 };
