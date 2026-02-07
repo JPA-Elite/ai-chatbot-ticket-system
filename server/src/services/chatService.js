@@ -24,7 +24,8 @@ import {
   TAG_MATCH_STOP_WORDS,
   RESPOND_TO_ESCALATION_MSG,
   TICKET_DESCRIPTION_TEMPLATE,
-  TICKET_TITLE_PREVIEW_LENGTH
+  TICKET_TITLE_PREVIEW_LENGTH,
+  GREETING_RESPONSES,
 } from '../constants/constants.js';
 import {
   ALL_CHATS_DELETED_MESSAGE,
@@ -496,67 +497,70 @@ export const sendMessageData = async ({ message, chatId, user }) => {
     }
   }
 
-  const updatedInquiryMatch = await findUpdatedInquiryOverride(message);
+  const analyzeResult = await analyzeConversation(chatHistory, message);
 
-  if (updatedInquiryMatch) {
-    if (updatedInquiryMatch.isRelevant === 0) {
-      aiResponse = RESPOND_TO_ESCALATION_MSG;
+  if (analyzeResult === true) {
+    const studentText = normalize(message);
+    const staffList = await getActiveStaffWithTags();
+    const best = findBestStaffMatch(staffList, studentText);
+
+    const assignmentIntent = ASSIGNMENT_INTENT_REGEX.test(message || "");
+    const shouldAutoCreateTicket = assignmentIntent || (best.staff && best.score >= 2 && best.hasMeaningfulMatch);
+
+    if (!shouldAutoCreateTicket) {
+      aiResponse = formatStaffSelectionMessage(staffList);
     } else {
-      aiResponse = updatedInquiryMatch.generatedResponse;
+      aiResponse = ESCALATION_AUTO_TICKET_RESPONSE;
+      chat.escalatedToTicket = true;
+      escalated = true;
+
+      const ticket = await Ticket.create({
+        userId: user.id,
+        chatId: chat._id,
+        title: `${message.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`,
+        description: TICKET_DESCRIPTION_TEMPLATE(message, aiResponse),
+        category: DEFAULT_TICKET_CATEGORY,
+        priority: DEFAULT_TICKET_PRIORITY,
+        assignedTo: best.staff._id,
+        tag: best.tag || "",
+        status: DEFAULT_TICKET_STATUS
+      });
+
+      chat.ticketId = ticket._id;
+      ticketId = ticket._id;
+
+      try {
+        const student = await User.findById(user.id).select('name email');
+
+        const matchedStaffEmail =
+          ticket.assignedTo
+            ? (await User.findById(ticket.assignedTo).select('email'))?.email
+            : null;
+
+        if (student) {
+          if (matchedStaffEmail) {
+            await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
+            console.log(`Ticket created and notification sent to assigned staff: ${matchedStaffEmail}`);
+          } else {
+            await sendTicketCreatedToStaff(ticket, student.name, student.email);
+            console.log('Ticket created but no specific staff assigned, notification sent to general staff inbox');
+          }
+        }
+      } catch (emailError) {
+        console.error('Error sending ticket notification email:', emailError);
+      }
     }
   } else {
-    const analyzeResult = await analyzeConversation(chatHistory, message);
-
-    if (analyzeResult === true) {
-      const studentText = normalize(message);
-      const staffList = await getActiveStaffWithTags();
-      const best = findBestStaffMatch(staffList, studentText);
-
-      const assignmentIntent = ASSIGNMENT_INTENT_REGEX.test(message || "");
-      const shouldAutoCreateTicket = assignmentIntent || (best.staff && best.score >= 2 && best.hasMeaningfulMatch);
-
-      if (!shouldAutoCreateTicket) {
-        aiResponse = formatStaffSelectionMessage(staffList);
-      } else {
-        aiResponse = ESCALATION_AUTO_TICKET_RESPONSE;
-        chat.escalatedToTicket = true;
-        escalated = true;
-
-        const ticket = await Ticket.create({
-          userId: user.id,
-          chatId: chat._id,
-          title: `${message.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`,
-          description: TICKET_DESCRIPTION_TEMPLATE(message, aiResponse),
-          category: DEFAULT_TICKET_CATEGORY,
-          priority: DEFAULT_TICKET_PRIORITY,
-          assignedTo: best.staff._id,
-          tag: best.tag || "",
-          status: DEFAULT_TICKET_STATUS
-        });
-
-        chat.ticketId = ticket._id;
-        ticketId = ticket._id;
-
-        try {
-          const student = await User.findById(user.id).select('name email');
-
-          const matchedStaffEmail =
-            ticket.assignedTo
-              ? (await User.findById(ticket.assignedTo).select('email'))?.email
-              : null;
-
-          if (student) {
-            if (matchedStaffEmail) {
-              await sendTicketCreatedToStaff(ticket, student.name, student.email, [matchedStaffEmail]);
-              console.log(`Ticket created and notification sent to assigned staff: ${matchedStaffEmail}`);
-            } else {
-              await sendTicketCreatedToStaff(ticket, student.name, student.email);
-              console.log('Ticket created but no specific staff assigned, notification sent to general staff inbox');
-            }
-          }
-        } catch (emailError) {
-          console.error('Error sending ticket notification email:', emailError);
+    if (!GREETING_RESPONSES.includes(String(analyzeResult))) {
+      const updatedInquiryMatch = await findUpdatedInquiryOverride(message);
+      if (updatedInquiryMatch) {
+        if (updatedInquiryMatch.isRelevant === 0) {
+          aiResponse = RESPOND_TO_ESCALATION_MSG;
+        } else {
+          aiResponse = updatedInquiryMatch.generatedResponse;
         }
+      } else {
+        aiResponse = analyzeResult;
       }
     } else {
       aiResponse = analyzeResult;
