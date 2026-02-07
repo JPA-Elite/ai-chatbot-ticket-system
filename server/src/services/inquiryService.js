@@ -151,7 +151,7 @@ export const deleteInquiryData = async (id) => {
   };
 };
 
-export const importInquiryFileData = async (file) => {
+export const importInquiryFileData = async (file, count) => {
   if (!file) {
     return { status: 400, payload: { success: false, message: NO_FILE_UPLOADED_MESSAGE } };
   }
@@ -183,7 +183,7 @@ export const importInquiryFileData = async (file) => {
   }
 
   try {
-    const inquiries = await generateInquiriesAI(normalizedText);
+    const inquiries = await generateInquiriesAI(normalizedText, count);
 
     for (const inquiry of inquiries) {
       const existing = await findInquiryByPromptQuestion(inquiry.question);

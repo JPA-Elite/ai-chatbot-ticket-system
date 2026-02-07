@@ -91,7 +91,15 @@ export const deleteInquiry = async (req, res) => {
 
 export const importInquiryFile = async (req, res) => {
   try {
-    const result = await importInquiryFileData(req.file);
+    const count = Number(req.body.count);
+    if (!count) {
+      return res.status(400).json({
+        success: false,
+        message: "Count is required"
+      });
+    }
+
+    const result = await importInquiryFileData(req.file, count);
     return res.status(result.status).json(result.payload);
   } catch (error) {
     console.error(error);
