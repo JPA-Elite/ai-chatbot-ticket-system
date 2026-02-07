@@ -3,8 +3,63 @@ import { PYTHON_API_BASE_URL } from '../config/api.js';
 import { fetchRelevanceData } from '../repositories/pythonRepository.js';
 import {
   INSUFFICIENT_METRICS_DATA_MESSAGE,
-  METRICS_FETCH_FAILED_MESSAGE
+  METRICS_FETCH_FAILED_MESSAGE,
+  TRAINING_SYNC_FAILED_MESSAGE,
+  TRAINING_PREDICTION_FAILED_MESSAGE
 } from '../constants/controllerMessages.js';
+
+export const sendTrainingData = async ({
+  userInquiry,
+  aiResponse,
+  isEscalated = false,
+  chatId,
+  userId
+}) => {
+  try {
+    const response = await axios.post(
+      `${PYTHON_API_BASE_URL}/train/ingest`,
+      {
+        user_inquiry: userInquiry,
+        ai_response: aiResponse,
+        is_escalated: Boolean(isEscalated),
+        chat_id: chatId,
+        user_id: userId
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      }
+    );
+
+    if (response.data?.status !== 'success') {
+      return {
+        status: 500,
+        payload: {
+          status: response.data?.status || 'error',
+          message: response.data?.message || TRAINING_SYNC_FAILED_MESSAGE
+        }
+      };
+    }
+
+    return {
+      status: 200,
+      payload: {
+        status: 'success',
+        message: response.data?.message || 'Training data synced',
+        details: response.data
+      }
+    };
+  } catch (error) {
+    console.error('Training sync error:', error.message);
+    return {
+      status: 500,
+      payload: {
+        status: error,
+        message: TRAINING_SYNC_FAILED_MESSAGE
+      }
+    };
+  }
+};
 
 export const fetchMetricsData = async () => {
   const relevanceData = await fetchRelevanceData();
@@ -73,6 +128,48 @@ export const fetchMetricsData = async () => {
         status: error,
         metrics: {},
         message: METRICS_FETCH_FAILED_MESSAGE
+      }
+    };
+  }
+};
+
+export const predictTrainingData = async ({ userInquiry }) => {
+  try {
+    const response = await axios.post(
+      `${PYTHON_API_BASE_URL}/train/predict`,
+      {
+        user_inquiry: userInquiry
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      }
+    );
+
+    if (response.data?.status !== 'success') {
+      return {
+        status: 500,
+        payload: {
+          status: response.data?.status || 'error',
+          message: response.data?.message || TRAINING_PREDICTION_FAILED_MESSAGE
+        }
+      };
+    }
+
+    return {
+      status: 200,
+      payload: {
+        status: 'success',
+        prediction: response.data?.prediction
+      }
+    };
+  } catch (error) {
+    console.error('Training prediction error:', error.message);
+    return {
+      status: 500,
+      payload: {
+        status: error,
+        message: TRAINING_PREDICTION_FAILED_MESSAGE
       }
     };
   }

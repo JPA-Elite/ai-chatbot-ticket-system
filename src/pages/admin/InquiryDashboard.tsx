@@ -54,9 +54,13 @@ const InquiryDashboard: React.FC = () => {
   const MAX_FILE_SIZE_MB = 1;
   const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-  const fetchInquiries = async (page = 1,
+  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+
+  const fetchInquiries = async (
+    page = 1,
     search = '',
-    limit = perPage
+    limit = perPage,
+    status = statusFilter
   ) => {
     try {
       setLoading(true);
@@ -64,7 +68,7 @@ const InquiryDashboard: React.FC = () => {
 
       const res = await axios.get(`${API_BASE_URL}/api/inquiry`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { page, limit, search },
+        params: { page, limit, search, status },
       });
 
       if (res.data.success) {
@@ -358,7 +362,7 @@ const InquiryDashboard: React.FC = () => {
 
       <div className="mb-4 flex items-center justify-between">
         {/* Per Page (LEFT) */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
           <label className="text-sm text-gray-600">Show</label>
           <select
             value={perPage}
@@ -376,6 +380,23 @@ const InquiryDashboard: React.FC = () => {
             <option value={50}>50</option>
           </select>
           <span className="text-sm text-gray-600">entries</span>
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600">Status</label>
+            <select
+              value={statusFilter}
+              onChange={e => {
+                const value = e.target.value as 'all' | 'enabled' | 'disabled';
+                setStatusFilter(value);
+                setCurrentPage(1);
+                fetchInquiries(1, searchQuery, perPage, value);
+              }}
+              className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="all">All</option>
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
         </div>
 
         {/* Search (RIGHT) */}

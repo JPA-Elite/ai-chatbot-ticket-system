@@ -4,6 +4,7 @@ import {
   getUserChatsData,
   sendMessageData
 } from '../services/chatService.js';
+import { sendTrainingData } from '../services/pythonAPIService.js';
 import { SERVER_ERROR_MESSAGE } from '../constants/controllerMessages.js';
 
 // @desc    Start or continue a chat session
@@ -16,6 +17,26 @@ export const sendMessage = async (req, res) => {
       chatId: req.body.chatId,
       user: req.user
     });
+    if (result.payload?.success && result.payload?.data?.chat) {
+      const { chat, escalated } = result.payload.data;
+      const messages = Array.isArray(chat.messages) ? chat.messages.slice().reverse() : [];
+      const lastUser = messages.find(entry => entry?.role === 'user');
+      const lastAssistant = messages.find(entry => entry?.role === 'assistant');
+
+      if (lastUser?.content && lastAssistant?.content) {
+        const trainingResult = await sendTrainingData({
+          userInquiry: lastUser.content,
+          aiResponse: lastAssistant.content,
+          isEscalated: Boolean(escalated),
+          chatId: chat._id,
+          userId: chat.userId
+        });
+
+        if (trainingResult.status !== 200) {
+          console.warn('Training sync failed:', trainingResult.payload?.message);
+        }
+      }
+    }
     return res.status(result.status).json(result.payload);
   } catch (error) {
     console.error('Chat error:', error);
