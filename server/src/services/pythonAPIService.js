@@ -79,6 +79,56 @@ export const fetchMetricsData = async () => {
     is_relevant: Number(item.isRelevant)
   }));
 
+  const normalizeConfusionMatrix = rawMatrix => {
+    if (!rawMatrix) {
+      return {
+        tp: 0,
+        fp: 0,
+        fn: 0,
+        tn: 0
+      };
+    }
+
+    if (Array.isArray(rawMatrix)) {
+      if (rawMatrix.length === 2 && rawMatrix.every(Array.isArray)) {
+        const [[tn, fp], [fn, tp]] = rawMatrix;
+        return {
+          tp: Number(tp) || 0,
+          fp: Number(fp) || 0,
+          fn: Number(fn) || 0,
+          tn: Number(tn) || 0
+        };
+      }
+
+      if (rawMatrix.length === 4 && rawMatrix.every(item => !Array.isArray(item))) {
+        const [tn, fp, fn, tp] = rawMatrix;
+        return {
+          tp: Number(tp) || 0,
+          fp: Number(fp) || 0,
+          fn: Number(fn) || 0,
+          tn: Number(tn) || 0
+        };
+      }
+    }
+
+    if (typeof rawMatrix === 'object') {
+      const { tp = 0, fp = 0, fn = 0, tn = 0 } = rawMatrix;
+      return {
+        tp: Number(tp) || 0,
+        fp: Number(fp) || 0,
+        fn: Number(fn) || 0,
+        tn: Number(tn) || 0
+      };
+    }
+
+    return {
+      tp: 0,
+      fp: 0,
+      fn: 0,
+      tn: 0
+    };
+  };
+
   try {
     const response = await axios.post(
       `${PYTHON_API_BASE_URL}/metrics/compute-metrics`,
@@ -101,16 +151,11 @@ export const fetchMetricsData = async () => {
     }
 
     const { metrics } = response.data;
-    const [[tn, fp], [fn, tp]] = metrics?.confusion_matrix || [[0, 0], [0, 0]];
+    const confusionMatrix = normalizeConfusionMatrix(metrics?.confusion_matrix);
 
     const normalizedMetrics = {
       ...metrics,
-      confusion_matrix: {
-        tp,
-        fp,
-        fn,
-        tn
-      }
+      confusion_matrix: confusionMatrix
     };
 
     return {
