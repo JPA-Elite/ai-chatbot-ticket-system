@@ -45,9 +45,11 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
+const isMigrationInvocation = process.env.npm_lifecycle_event === 'migrations';
+
 function getMigrationName() {
-  if (process.env.MIGRATION) {
-    return process.env.MIGRATION;
+  if (!isMigrationInvocation) {
+    return null;
   }
 
   if (process.env.npm_config_migration) {
@@ -68,7 +70,7 @@ function getMigrationName() {
 }
 
 const migrationName = getMigrationName();
-const shouldRunMigration = Boolean(migrationName);
+const shouldRunMigrations = isMigrationInvocation;
 
 // Middleware
 app.use(cors());
@@ -123,11 +125,24 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('Connected to MongoDB');
 
-    if (shouldRunMigration) {
+    if (shouldRunMigrations) {
       try {
-        console.log(`Running migration: ${migrationName}`);
-        const migrationResult = await runMigration(migrationName);
-        console.log('Migration completed:', migrationResult);
+        if (migrationName) {
+          console.log(`Running migration: ${migrationName}`);
+          const migrationResult = await runMigration(migrationName);
+          console.log('Migration completed:', migrationResult);
+        } else {
+          const migrations = listMigrations();
+          if (migrations.length === 0) {
+            console.log('No migrations to run.');
+          } else {
+            for (const migration of migrations) {
+              console.log(`Running migration: ${migration}`);
+              const migrationResult = await runMigration(migration);
+              console.log('Migration completed:', migrationResult);
+            }
+          }
+        }
         process.exitCode = 0;
       } catch (err) {
         console.error('Migration failed:', err);
