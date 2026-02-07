@@ -59,6 +59,9 @@ def compute_metrics(data: List[dict]):
         y_pred = model.predict(X_test)
         y_prob = model.predict_proba(X_test)[:, 1]
 
+        confusion = confusion_matrix(y_test, y_pred, labels=[0, 1])
+        tn, fp, fn, tp = confusion.ravel()
+
         return {
             "status": "success",
             "metrics": {
@@ -67,7 +70,12 @@ def compute_metrics(data: List[dict]):
                 "recall": round(recall_score(y_test, y_pred, zero_division=0) * 100, 2),
                 "f1_score": round(f1_score(y_test, y_pred, zero_division=0) * 100, 2),
                 "mean_confidence": round(float(np.mean(y_prob)) * 100, 2),
-                "confusion_matrix": confusion_matrix(y_test, y_pred).tolist()
+                "confusion_matrix": {
+                    "tn": int(tn),
+                    "fp": int(fp),
+                    "fn": int(fn),
+                    "tp": int(tp)
+                }
             }
         }
 
