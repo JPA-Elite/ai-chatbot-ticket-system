@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import Ticket from '../models/Ticket.js';
 
+/** @typedef {import('../interfaces/staffRepositoryTypes.js').StaffRepository} StaffRepository */
+
 export const findStaffMembers = () =>
   User.find({ role: { $in: ['staff', 'admin'] } }).select('-password');
 
@@ -26,3 +28,18 @@ export const findTicketsByAssigneeWithUser = (staffId) =>
 
 export const unassignTickets = (staffId) =>
   Ticket.updateMany({ assignedTo: staffId }, { $unset: { assignedTo: 1 } });
+
+/** @type {StaffRepository} */
+export const staffRepository = {
+  findStaffMembers,
+  findStaffById,
+  findUserById,
+  countAdmins,
+  findUserByEmail,
+  createStaff,
+  saveStaff,
+  deleteStaffById,
+  findTicketsByAssignee,
+  findTicketsByAssigneeWithUser,
+  unassignTickets
+};

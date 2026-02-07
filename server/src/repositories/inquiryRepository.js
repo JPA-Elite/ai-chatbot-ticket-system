@@ -1,6 +1,8 @@
 import Inquiry from '../models/Inquiry.js';
 import InquiryRelevance from '../models/InquiryRelevance.js';
 
+/** @typedef {import('../interfaces/inquiryRepositoryTypes.js').InquiryRepository} InquiryRepository */
+
 export const countInquiries = (query) => Inquiry.countDocuments(query);
 
 export const findInquiries = (query, { sort, skip, limit }) =>
@@ -29,3 +31,19 @@ export const updateInquiryRelevanceMany = (filter, update) =>
 
 export const aggregateInquiryRelevance = (pipeline) =>
   InquiryRelevance.aggregate(pipeline);
+
+/** @type {InquiryRepository} */
+export const inquiryRepository = {
+  countInquiries,
+  findInquiries,
+  findInquiryById,
+  findInquiryByPromptQuestion,
+  findInquiryByPromptQuestionExcludingId,
+  saveInquiry,
+  createInquiry,
+  deleteInquiryById,
+  createInquiryRelevance,
+  findInquiryRelevanceById,
+  updateInquiryRelevanceMany,
+  aggregateInquiryRelevance
+};

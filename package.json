@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "server:python": "cd server/python && run-server.bat",
     "server": "cd server && npm run dev",
-    "dev:all": "concurrently \"npm run server:python\" \"npm run dev\" \"npm run server\""
+    "dev:all": "concurrently \"npm run server:python\" \"npm run dev\" \"npm run server\"",
+    "migrations": "cd server && npm run migrations"
   },
   "dependencies": {
     "axios": "^1.6.7",
