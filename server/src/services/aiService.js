@@ -19,6 +19,7 @@ import {
   buildResponseLanguageMatchMessages,
   buildTranslationMessages
 } from "./openaiPrompts.js";
+import { predictTrainingData } from "./pythonAPIService.js";
 
 // Mock AI Service for testing without OpenAI API key
 
@@ -83,6 +84,21 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
 
     if (isGreetingOnlyTranslated) {
       return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    }
+
+    const trainingPrediction = await predictTrainingData({ userInquiry: latestMessage });
+    const prediction = trainingPrediction.status === 200 ? trainingPrediction.payload?.prediction : null;
+    if (prediction?.is_escalated && prediction?.confidence >= 0.7) {
+      const responseTime = Date.now() - startResponseTime;
+      await createInquiryRelevance({
+        userInquiry: latestMessage,
+        generatedInquiry: ESCALATION_NEEDED_MSG,
+        generatedResponse: ESCALATION_NEEDED_RESPONSE,
+        similarityScore: prediction.confidence,
+        responsTime: responseTime,
+        isRelevant: 1
+      });
+      return true;
     }
 
     const aiDecision = await generateChatResponse(
