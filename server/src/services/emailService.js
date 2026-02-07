@@ -160,11 +160,14 @@ export const sendTicketAcceptedToStudent = async (ticket, studentName, studentEm
   });
 };
 
-import User from '../models/User.js';
+import { findStaffByFilter } from '../repositories/staffRepository.js';
 
 const getStaffEmails = async () => {
   try {
-    const staffUsers = await User.find({ role: { $in: ['admin', 'staff'] } }).select('email');
+    const staffUsers = await findStaffByFilter(
+      { role: { $in: ['admin', 'staff'] } },
+      { select: 'email' }
+    );
     return staffUsers.map((user) => user.email);
   } catch (error) {
     console.error('Error fetching staff emails:', error);

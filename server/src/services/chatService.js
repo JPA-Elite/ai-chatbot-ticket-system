@@ -1,6 +1,3 @@
-import Ticket from '../models/Ticket.js';
-import User from '../models/User.js';
-import InquiryRelevance from '../models/InquiryRelevance.js';
 import {
   ASSIGNMENT_INTENT_REGEX,
   CHAT_HISTORY_CONTENT_LIMIT,
@@ -47,14 +44,17 @@ import {
   findChatsByUserId,
   saveChat
 } from '../repositories/chatRepository.js';
+import { findInquiryRelevanceEntries } from '../repositories/inquiryRepository.js';
+import { findStaffByFilter, findUserById } from '../repositories/staffRepository.js';
+import { createTicket } from '../repositories/ticketRepository.js';
 
 const pickBestTag = async (message) => {
   const m = String(message || '').toLowerCase();
 
-  const staff = await User.find({
+  const staff = await findStaffByFilter({
     role: { $in: STAFF_ROLES },
     tags: { $exists: true, $ne: [] }
-  }).select('tags');
+  }, { select: 'tags' });
 
   const all = staff
     .flatMap(s => (s.tags || []))
@@ -106,10 +106,13 @@ const formatStaffSelectionMessage = (staffList = []) => {
 };
 
 const findUpdatedInquiryOverride = async (message = "") => {
-  const updatedEntries = await InquiryRelevance.find({ isUpdated: true })
-    .select('userInquiry generatedInquiry generatedResponse isRelevant createdAt')
-    .sort({ createdAt: -1 })
-    .lean();
+  const updatedEntries = await findInquiryRelevanceEntries(
+    { isUpdated: true },
+    {
+      select: 'userInquiry generatedInquiry generatedResponse isRelevant createdAt',
+      sort: { createdAt: -1 }
+    }
+  );
 
   if (!updatedEntries.length) {
     return null;
@@ -275,12 +278,13 @@ export const sendMessageData = async ({ message, chatId, user }) => {
   };
 
   const getActiveStaffWithTags = async () =>
-    User.find({
-      role: { $in: STAFF_ROLES },
-      isActive: true
-    })
-      .select("_id name email tags role")
-      .sort({ name: 1, _id: 1 });
+    findStaffByFilter(
+      {
+        role: { $in: STAFF_ROLES },
+        isActive: true
+      },
+      { select: "_id name email tags role", sort: { name: 1, _id: 1 } }
+    );
 
   const selectionMatch = STAFF_NUMBER_SELECTION_REGEX.exec(String(message || ""));
 
@@ -395,7 +399,7 @@ export const sendMessageData = async ({ message, chatId, user }) => {
         ? `${titleBase.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`
         : titleBase;
 
-    const ticket = await Ticket.create({
+    const ticket = await createTicket({
       userId: user.id,
       chatId: chat._id,
       title: safeTitle,
@@ -411,11 +415,11 @@ export const sendMessageData = async ({ message, chatId, user }) => {
     ticketId = ticket._id;
 
     try {
-      const student = await User.findById(user.id).select("name email");
+      const student = await findUserById(user.id);
 
       const matchedStaffEmail =
         ticket.assignedTo
-          ? (await User.findById(ticket.assignedTo).select("email"))?.email
+          ? (await findUserById(ticket.assignedTo))?.email
           : null;
 
       if (student) {
