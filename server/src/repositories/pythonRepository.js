@@ -1,5 +1,10 @@
 import InquiryRelevance from '../models/InquiryRelevance.js';
 
+/**
+ * @typedef {Object} PythonRepository
+ * @property {() => Promise<unknown[]>} fetchRelevanceData
+ */
+
 export const fetchRelevanceData = async () => {
   const batchSize = 10000;
   const totalRecords = await InquiryRelevance.countDocuments({});
@@ -15,4 +20,9 @@ export const fetchRelevanceData = async () => {
   }
 
   return allRecords;
+};
+
+/** @type {PythonRepository} */
+export const pythonRepository = {
+  fetchRelevanceData
 };

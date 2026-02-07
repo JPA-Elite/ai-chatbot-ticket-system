@@ -1,6 +1,21 @@
 import User from '../models/User.js';
 import Ticket from '../models/Ticket.js';
 
+/**
+ * @typedef {Object} StaffRepository
+ * @property {() => Promise<import('mongoose').Document[]>} findStaffMembers
+ * @property {(id: string) => Promise<import('mongoose').Document|null>} findStaffById
+ * @property {(id: string) => Promise<import('mongoose').Document|null>} findUserById
+ * @property {() => Promise<number>} countAdmins
+ * @property {(email: string) => Promise<import('mongoose').Document|null>} findUserByEmail
+ * @property {(data: Record<string, unknown>) => Promise<import('mongoose').Document>} createStaff
+ * @property {(staff: import('mongoose').Document) => Promise<import('mongoose').Document>} saveStaff
+ * @property {(id: string) => Promise<import('mongoose').Document|null>} deleteStaffById
+ * @property {(staffId: string) => Promise<import('mongoose').Document[]>} findTicketsByAssignee
+ * @property {(staffId: string) => Promise<import('mongoose').Document[]>} findTicketsByAssigneeWithUser
+ * @property {(staffId: string) => Promise<import('mongoose').UpdateWriteOpResult>} unassignTickets
+ */
+
 export const findStaffMembers = () =>
   User.find({ role: { $in: ['staff', 'admin'] } }).select('-password');
 
@@ -26,3 +41,18 @@ export const findTicketsByAssigneeWithUser = (staffId) =>
 
 export const unassignTickets = (staffId) =>
   Ticket.updateMany({ assignedTo: staffId }, { $unset: { assignedTo: 1 } });
+
+/** @type {StaffRepository} */
+export const staffRepository = {
+  findStaffMembers,
+  findStaffById,
+  findUserById,
+  countAdmins,
+  findUserByEmail,
+  createStaff,
+  saveStaff,
+  deleteStaffById,
+  findTicketsByAssignee,
+  findTicketsByAssigneeWithUser,
+  unassignTickets
+};
