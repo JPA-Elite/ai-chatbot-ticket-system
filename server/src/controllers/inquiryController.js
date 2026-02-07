@@ -16,8 +16,8 @@ import { SERVER_ERROR_MESSAGE } from '../constants/controllerMessages.js';
 // @access  Private/Admin
 export const getAllInquiry = async (req, res) => {
   try {
-    const { page = 1, limit = 5, search = '' } = req.query;
-    const payload = await getAllInquiryData({ page, limit, search });
+    const { page = 1, limit = 5, search = '', status = 'all' } = req.query;
+    const payload = await getAllInquiryData({ page, limit, search, status });
     res.status(200).json(payload);
   } catch (error) {
     console.error(error);

@@ -29,15 +29,19 @@ import {
   updateInquiryRelevanceMany
 } from '../repositories/inquiryRepository.js';
 
-export const getAllInquiryData = async ({ page = 1, limit = 5, search = '' }) => {
-  const query = search
-    ? {
-      $or: [
-        { promptQuestion: { $regex: escapeRegex(search), $options: 'i' } },
-        { promptResponse: { $regex: escapeRegex(search), $options: 'i' } }
-      ]
-    }
-    : {};
+export const getAllInquiryData = async ({ page = 1, limit = 5, search = '', status = 'all' }) => {
+  const query = {};
+
+  if (search) {
+    query.$or = [
+      { promptQuestion: { $regex: escapeRegex(search), $options: 'i' } },
+      { promptResponse: { $regex: escapeRegex(search), $options: 'i' } }
+    ];
+  }
+
+  if (status !== 'all') {
+    query.isEnabled = status === 'enabled';
+  }
 
   const total = await countInquiries(query);
   const inquiries = await findInquiries(query, {
