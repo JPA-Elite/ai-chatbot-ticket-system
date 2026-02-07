@@ -24,6 +24,10 @@ class TrainingItem(BaseModel):
     created_at: Optional[str] = None
 
 
+class PredictionItem(BaseModel):
+    user_inquiry: str
+
+
 def load_training_data():
     if not DATA_PATH.exists():
         return []
@@ -76,4 +80,28 @@ def ingest_training_data(payload: TrainingItem):
         "trained": trained,
         "message": message,
         "samples": len(records)
+    }
+
+
+@router.post("/predict")
+def predict_training_data(payload: PredictionItem):
+    if not MODEL_PATH.exists() or not VECTORIZER_PATH.exists():
+        return {
+            "status": "error",
+            "message": "Model not trained"
+        }
+
+    model = joblib.load(MODEL_PATH)
+    vectorizer = joblib.load(VECTORIZER_PATH)
+
+    features = vectorizer.transform([payload.user_inquiry])
+    prediction = int(model.predict(features)[0])
+    confidence = float(model.predict_proba(features)[0][1])
+
+    return {
+        "status": "success",
+        "prediction": {
+            "is_escalated": bool(prediction),
+            "confidence": round(confidence, 4)
+        }
     }

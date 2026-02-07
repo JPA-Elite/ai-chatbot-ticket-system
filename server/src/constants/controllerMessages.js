@@ -20,6 +20,7 @@ export const RELEVANCE_UPDATED_MESSAGE = 'Relevance updated for all matching inq
 export const INSUFFICIENT_METRICS_DATA_MESSAGE = 'Insufficient data to compute metrics';
 export const METRICS_FETCH_FAILED_MESSAGE = 'Failed to fetch metrics';
 export const TRAINING_SYNC_FAILED_MESSAGE = 'Failed to sync training data';
+export const TRAINING_PREDICTION_FAILED_MESSAGE = 'Failed to run training prediction';
 export const STAFF_MEMBER_NOT_FOUND_MESSAGE = 'Staff member not found';
 export const CANNOT_DELETE_LAST_ADMIN_MESSAGE = 'Cannot delete the last admin user';
 export const STAFF_MEMBER_DELETED_MESSAGE = 'Staff member deleted successfully';
