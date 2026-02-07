@@ -1,4 +1,3 @@
-import User from '../models/User.js';
 import {
   DEFAULT_ROUTING_DEPARTMENTS,
   DEPARTMENT_MAPPING,
@@ -7,6 +6,8 @@ import {
   TICKET_ACTIVE_STATUSES
 } from '../constants/constants.js';
 import { classifyTicket } from './aiService.js';
+import { findStaffByFilter, findUserById } from '../repositories/staffRepository.js';
+import { countTickets, findTicketByIdRaw, saveTicket } from '../repositories/ticketRepository.js';
 
 /**
  * AI-powered ticket routing service
@@ -17,9 +18,7 @@ import { classifyTicket } from './aiService.js';
  * Get staff workload (number of active tickets)
  */
 const getStaffWorkload = async (staffId) => {
-  const Ticket = (await import('../models/Ticket.js')).default;
-  
-  const activeTickets = await Ticket.countDocuments({
+  const activeTickets = await countTickets({
     assignedTo: staffId,
     status: { $in: TICKET_ACTIVE_STATUSES }
   });
@@ -72,7 +71,7 @@ const calculateStaffScore = async (staff, category, priority, description) => {
 export const findBestStaffForTicket = async (category, priority, description, excludeStaffIds = []) => {
   try {
     // Get all active staff members
-    const availableStaff = await User.find({
+    const availableStaff = await findStaffByFilter({
       role: { $in: STAFF_ROLES },
       isActive: { $ne: false },
       _id: { $nin: excludeStaffIds }
@@ -115,9 +114,7 @@ export const findBestStaffForTicket = async (category, priority, description, ex
  */
 export const autoAssignTicket = async (ticketId) => {
   try {
-    const Ticket = (await import('../models/Ticket.js')).default;
-    
-    const ticket = await Ticket.findById(ticketId);
+    const ticket = await findTicketByIdRaw(ticketId);
     if (!ticket) {
       throw new Error('Ticket not found');
     }
@@ -155,7 +152,7 @@ export const autoAssignTicket = async (ticketId) => {
         timestamp: new Date()
       });
       
-      await ticket.save();
+      await saveTicket(ticket);
       
       console.log(`Ticket ${ticketId} auto-assigned to ${bestStaff.name} (${bestStaff.department})`);
     } else {
@@ -174,19 +171,17 @@ export const autoAssignTicket = async (ticketId) => {
  */
 export const reassignTicket = async (ticketId, newStaffId, adminId, reason = '') => {
   try {
-    const Ticket = (await import('../models/Ticket.js')).default;
-    
-    const ticket = await Ticket.findById(ticketId);
+    const ticket = await findTicketByIdRaw(ticketId);
     if (!ticket) {
       throw new Error('Ticket not found');
     }
 
-    const newStaff = await User.findById(newStaffId);
+    const newStaff = await findUserById(newStaffId);
     if (!newStaff) {
       throw new Error('Staff member not found');
     }
 
-    const admin = await User.findById(adminId);
+    const admin = await findUserById(adminId);
     const oldStaffId = ticket.assignedTo;
 
     // Update assignment
@@ -200,7 +195,7 @@ export const reassignTicket = async (ticketId, newStaffId, adminId, reason = '')
       timestamp: new Date()
     });
 
-    await ticket.save();
+    await saveTicket(ticket);
     
     console.log(`Ticket ${ticketId} reassigned to ${newStaff.name} by ${admin.name}`);
     
@@ -216,15 +211,13 @@ export const reassignTicket = async (ticketId, newStaffId, adminId, reason = '')
  */
 export const getRoutingSuggestions = async (ticketId) => {
   try {
-    const Ticket = (await import('../models/Ticket.js')).default;
-    
-    const ticket = await Ticket.findById(ticketId);
+    const ticket = await findTicketByIdRaw(ticketId);
     if (!ticket) {
       throw new Error('Ticket not found');
     }
 
     // Get all available staff
-    const availableStaff = await User.find({
+    const availableStaff = await findStaffByFilter({
       role: { $in: STAFF_ROLES },
       isActive: { $ne: false }
     });

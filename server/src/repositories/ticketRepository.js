@@ -1,5 +1,7 @@
 import Ticket from '../models/Ticket.js';
 
+/** @typedef {import('../interfaces/ticketRepositoryTypes.js').TicketRepository} TicketRepository */
+
 export const findTickets = (filter, { sort, skip, limit }) =>
   Ticket.find(filter).populate('userId', 'name email').populate('assignedTo', 'name email').sort(sort).skip(skip).limit(limit);
 
@@ -30,3 +32,17 @@ export const findTicketByIdWithChat = (id) =>
 export const findTicketByIdRaw = (id) => Ticket.findById(id);
 
 export const saveTicket = (ticket) => ticket.save();
+
+export const createTicket = (data) => Ticket.create(data);
+
+/** @type {TicketRepository} */
+export const ticketRepository = {
+  findTickets,
+  countTickets,
+  findTicketsByUserId,
+  findTicketById,
+  findTicketByIdWithChat,
+  findTicketByIdRaw,
+  saveTicket,
+  createTicket
+};

@@ -1,5 +1,4 @@
 import openai from "../config/openaiClient.js";
-import Inquiry from "../models/Inquiry.js";
 import { createChatCompletion, detectEnglishLanguage } from "../utils/utils.js";
 import {
   FILLER_PHRASES,
@@ -9,7 +8,10 @@ import {
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE
 } from "../constants/constants.js";
-import InquiryRelevance from "../models/InquiryRelevance.js";
+import {
+  createInquiryRelevance,
+  findEnabledInquiries
+} from "../repositories/inquiryRepository.js";
 import {
   buildCanonicalizeQuestionMessages,
   buildEscalationDecisionMessages,
@@ -92,7 +94,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     // Normalize response and return boolean
     if (aiDecision.trim().toUpperCase() === "YES") {
       const responseTime = Date.now() - startResponseTime;
-        await InquiryRelevance.create({
+        await createInquiryRelevance({
         userInquiry: latestMessage,
         generatedInquiry: ESCALATION_NEEDED_MSG,
         generatedResponse: ESCALATION_NEEDED_RESPONSE,
@@ -110,7 +112,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
       const relevantInquiries = await findRelevantInquiriesAI(latestMessage);
       if (relevantInquiries.length > 0 && relevantInquiries[0].score >= 0.5) {
         const responseTime = Date.now() - startResponseTime;
-        await InquiryRelevance.create({
+        await createInquiryRelevance({
           userInquiry: latestMessage,
           generatedInquiry: relevantInquiries[0].inquiry.promptQuestion,
           generatedResponse: relevantInquiries[0].inquiry.promptResponse,
@@ -124,7 +126,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
 
       if (isRespondToEscalation) {
         const responseTime = Date.now() - startResponseTime;
-        await InquiryRelevance.create({
+        await createInquiryRelevance({
           userInquiry: latestMessage,
           generatedInquiry: ESCALATION_NEEDED_MSG,
           generatedResponse: RESPOND_TO_ESCALATION_MSG,
@@ -369,7 +371,7 @@ export async function findRelevantInquiriesAI(userQuestion) {
   const englishQuestion = await detectAndTranslateToEnglish(userQuestion);
   const canonicalQuestion = await canonicalizeQuestion(englishQuestion);
   const userEmbedding = await createEmbedding(preprocessText(canonicalQuestion, true));
-  const inquiries = await Inquiry.find({ isEnabled: true });
+  const inquiries = await findEnabledInquiries();
 
   const scored = await Promise.all(inquiries.map(async (inquiry) => {
     let inquiryText = inquiry.promptQuestion;
