@@ -54,6 +54,9 @@ const StaffDashboard: React.FC = () => {
     password: '',
     confirmPassword: '',
   });
+  const [addErrors, setAddErrors] = useState<{ tags?: string }>({});
+  const [editErrors, setEditErrors] = useState<{ tags?: string }>({});
+
   const { token, user: currentUser } = useAuth();
 
   const parseTags = (value: string) =>
@@ -124,6 +127,28 @@ const StaffDashboard: React.FC = () => {
         return scoreB - scoreA;
       })
       .slice(0, 3);
+  };
+
+  const validateAddStaff = () => {
+    const tags = parseTags(newStaff.tagsText);
+
+    const errors: { tags?: string } = {};
+    if (tags.length === 0) errors.tags = "Tags are required (add at least one).";
+
+    setAddErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateEditStaff = () => {
+    if (!editStaff) return false;
+
+    const tags = parseTags(editStaff.tagsText);
+
+    const errors: { tags?: string } = {};
+    if (tags.length === 0) errors.tags = "Tags are required (add at least one).";
+
+    setEditErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const overallStats = getOverallStats();
@@ -449,6 +474,7 @@ const StaffDashboard: React.FC = () => {
                     <div className="flex justify-end space-x-2">
                       <button className="text-blue-600 hover:text-blue-900"
                         onClick={() => {
+                          setEditErrors({});
                           const initialTags = staff.tags || [];
                           setEditStaff({
                             _id: staff._id,
@@ -492,6 +518,7 @@ const StaffDashboard: React.FC = () => {
         </button>
         <button
           onClick={() => {
+            setAddErrors({});
             setNewStaff({
               name: '',
               email: '',
@@ -543,7 +570,10 @@ const StaffDashboard: React.FC = () => {
       <Modal
         open={showAddModal}
         title="Add Staff Member"
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          setAddErrors({});
+        }}
         size='sm'
       >
         <div className="space-y-4">
@@ -566,10 +596,14 @@ const StaffDashboard: React.FC = () => {
           <input
             type="text"
             placeholder="Tags (comma-separated)"
-            className="w-full border px-3 py-2 rounded"
+            className={`w-full border px-3 py-2 rounded ${addErrors.tags ? "border-red-500" : ""}`}
             value={newStaff.tagsText}
-            onChange={e => setNewStaff({ ...newStaff, tagsText: e.target.value })}
+            onChange={e => {
+              setNewStaff({ ...newStaff, tagsText: e.target.value });
+              if (addErrors.tags) setAddErrors(prev => ({ ...prev, tags: undefined }));
+            }}
           />
+          {addErrors.tags && <p className="text-xs text-red-600">{addErrors.tags}</p>}
 
           <input
             type="password"
@@ -593,13 +627,19 @@ const StaffDashboard: React.FC = () => {
 
           <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={() => setShowAddModal(false)}
+              onClick={() => {
+                setShowAddModal(false);
+                setAddErrors({});
+              }}
               className="px-4 py-2 bg-gray-200 rounded"
             >
               Cancel
             </button>
             <button
-              onClick={handleAddStaff}
+              onClick={() => {
+                if (!validateAddStaff()) return;
+                handleAddStaff();
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded"
             >
               Add Staff
@@ -612,7 +652,10 @@ const StaffDashboard: React.FC = () => {
       <Modal
         open={showEditModal}
         title="Edit Staff Member"
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditErrors({});
+        }}
         size='sm'
       >
         {editStaff && (
@@ -638,16 +681,21 @@ const StaffDashboard: React.FC = () => {
             <input
               type="text"
               placeholder="Tags (comma-separated)"
-              className="w-full border px-3 py-2 rounded"
+              className={`w-full border px-3 py-2 rounded ${editErrors.tags ? "border-red-500" : ""}`}
               value={editStaff.tagsText}
-              onChange={e =>
+              onChange={e => {
+                const value = e.target.value;
+
                 setEditStaff({
                   ...editStaff,
-                  tagsText: e.target.value,
-                  tags: parseTags(e.target.value),
-                })
-              }
+                  tagsText: value,
+                  tags: parseTags(value),
+                });
+
+                if (editErrors.tags) setEditErrors(prev => ({ ...prev, tags: undefined }));
+              }}
             />
+            {editErrors.tags && <p className="text-xs text-red-600">{editErrors.tags}</p>}
 
             <input
               type="password"
@@ -682,13 +730,19 @@ const StaffDashboard: React.FC = () => {
 
             <div className="flex justify-end gap-2 pt-2">
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditErrors({});
+                }}
                 className="px-4 py-2 bg-gray-200 rounded"
               >
                 Cancel
               </button>
               <button
-                onClick={handleUpdateStaff}
+                onClick={() => {
+                  if (!validateEditStaff()) return;
+                  handleUpdateStaff();
+                }}
                 className="px-4 py-2 bg-blue-600 text-white rounded"
               >
                 Save Changes

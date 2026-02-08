@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, CheckCircle, Clock, ArrowRight } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTicket } from "../../context/TicketContext";
 import { useAuth } from "../../context/AuthContext";
+import { getStatusIcon } from "../utils/utils";
 
 const TicketList: React.FC = () => {
   const { tickets, loading } = useTicket();
@@ -18,21 +19,6 @@ const TicketList: React.FC = () => {
       window.dispatchEvent(new Event("tickets:read"));
     }
     navigate(isAdmin ? `/admin/tickets/${id}` : `/tickets/${id}`);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <Clock className="h-5 w-5 text-green-500" />;
-      case "accepted":
-      case "in-progress":
-        return <ArrowRight className="h-5 w-5 text-blue-500" />;
-      case "resolved":
-      case "closed":
-        return <CheckCircle className="h-5 w-5 text-gray-500" />;
-      default:
-        return <AlertCircle className="h-5 w-5 text-gray-500" />;
-    }
   };
 
   const getStatusBorder = (status: string) => {
@@ -50,20 +36,20 @@ const TicketList: React.FC = () => {
     }
   };
 
-  const getPriorityClass = (priority: string) => {
-    switch (priority) {
-      case "low":
-        return "bg-green-100 text-green-800";
-      case "medium":
-        return "bg-blue-100 text-blue-800";
-      case "high":
-        return "bg-orange-100 text-orange-800";
-      case "urgent":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // const getPriorityClass = (priority: string) => {
+  //   switch (priority) {
+  //     case "low":
+  //       return "bg-green-100 text-green-800";
+  //     case "medium":
+  //       return "bg-blue-100 text-blue-800";
+  //     case "high":
+  //       return "bg-orange-100 text-orange-800";
+  //     case "urgent":
+  //       return "bg-red-100 text-red-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -119,12 +105,12 @@ const TicketList: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex items-center">
-                  <span
+                  {/* <span
                     className={`px-2 py-1 text-xs rounded-full ${getPriorityClass(ticket.priority)}`}
                   >
                     {ticket.priority.charAt(0).toUpperCase() +
                       ticket.priority.slice(1)}
-                  </span>
+                  </span> */}
                   <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
                     {new Date(ticket.createdAt).toLocaleDateString()}
                   </span>
@@ -138,11 +124,11 @@ const TicketList: React.FC = () => {
                       : ticket.description}
                   </p>
                 </div>
-                <div>
+                {/* <div>
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
                     {ticket.category}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           </motion.li>

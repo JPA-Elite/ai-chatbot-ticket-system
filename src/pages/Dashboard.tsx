@@ -1,26 +1,27 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Ticket, ArrowRight, Clock, CheckCircle } from 'lucide-react';
+import { MessageSquare, Ticket, ArrowRight, Clock, CheckCircle, Hourglass } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useTicket } from '../context/TicketContext';
+import { getStatusIcon } from '../components/utils/utils';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { chats, loadUserChats } = useChat();
   const { tickets, getUserTickets } = useTicket();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     loadUserChats();
     getUserTickets();
   }, []);
-  
+
   const getTicketStatusCount = (status: string) => {
     return tickets.filter(ticket => ticket.status === status).length;
   };
-  
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -34,12 +35,12 @@ const Dashboard: React.FC = () => {
         </motion.h1>
         <p className="text-gray-600">Here's an overview of your support activity</p>
       </div>
-      
+
       {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <motion.div
+          {user?.role == 'user' ? (<motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
@@ -56,8 +57,7 @@ const Dashboard: React.FC = () => {
               </div>
               <ArrowRight className="h-5 w-5 text-blue-500 ml-auto" />
             </div>
-          </motion.div>
-          
+          </motion.div>) : ''}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -78,12 +78,12 @@ const Dashboard: React.FC = () => {
           </motion.div>
         </div>
       </div>
-      
+
       {/* Stats */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -98,8 +98,8 @@ const Dashboard: React.FC = () => {
                 <p className="text-2xl font-bold text-gray-900">{chats.length}</p>
               </div>
             </div>
-          </motion.div>
-          
+          </motion.div> */}
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -116,7 +116,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </motion.div>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -130,12 +130,29 @@ const Dashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-500">Open Tickets</p>
                 <p className="text-2xl font-bold text-gray-900">
+                  {getTicketStatusCount('open') + getTicketStatusCount('pending')}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="bg-white border border-gray-200 rounded-lg p-5"
+          >
+            <div className="flex items-center">
+              <div className="mr-4">
+                <ArrowRight className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">In Progress Tickets</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {getTicketStatusCount('open') + getTicketStatusCount('in-progress')}
                 </p>
               </div>
             </div>
           </motion.div>
-          
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -156,11 +173,11 @@ const Dashboard: React.FC = () => {
           </motion.div>
         </div>
       </div>
-      
+
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
         {/* Recent Chats */}
-        <div>
+        {/* <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Recent Chats</h2>
             <button
@@ -170,7 +187,7 @@ const Dashboard: React.FC = () => {
               View All
             </button>
           </div>
-          
+
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             {chats.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
@@ -199,7 +216,7 @@ const Dashboard: React.FC = () => {
                         <MessageSquare className="h-5 w-5 text-blue-500 mr-3" />
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {chat.messages.length > 0 
+                            {chat.messages.length > 0
                               ? chat.messages.filter(msg => msg.role === 'user')[0]?.content.substring(0, 40) + '...' || 'New conversation'
                               : 'New conversation'}
                           </p>
@@ -219,8 +236,8 @@ const Dashboard: React.FC = () => {
               </ul>
             )}
           </div>
-        </div>
-        
+        </div> */}
+
         {/* Recent Tickets */}
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -232,7 +249,7 @@ const Dashboard: React.FC = () => {
               View All
             </button>
           </div>
-          
+
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             {tickets.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
@@ -259,10 +276,7 @@ const Dashboard: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-start">
                         <div className="mt-0.5 mr-3">
-                          {ticket.status === 'open' && <Clock className="h-5 w-5 text-yellow-500" />}
-                          {ticket.status === 'in-progress' && <ArrowRight className="h-5 w-5 text-blue-500" />}
-                          {ticket.status === 'resolved' && <CheckCircle className="h-5 w-5 text-green-500" />}
-                          {ticket.status === 'closed' && <CheckCircle className="h-5 w-5 text-gray-500" />}
+                          {getStatusIcon(ticket.status)}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{ticket.title}</p>
@@ -271,14 +285,13 @@ const Dashboard: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        ticket.priority === 'low' ? 'bg-green-100 text-green-800' :
+                      {/* <span className={`text-xs px-2 py-1 rounded-full ${ticket.priority === 'low' ? 'bg-green-100 text-green-800' :
                         ticket.priority === 'medium' ? 'bg-blue-100 text-blue-800' :
-                        ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                          ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                            'bg-red-100 text-red-800'
+                        }`}>
                         {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-                      </span>
+                      </span> */}
                     </div>
                   </motion.li>
                 ))}

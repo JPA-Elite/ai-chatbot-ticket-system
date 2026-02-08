@@ -139,7 +139,7 @@ const StaffStats: React.FC = () => {
             </div>
           </motion.div>
 
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -166,7 +166,7 @@ const StaffStats: React.FC = () => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -255,7 +255,7 @@ const StaffStats: React.FC = () => {
         </motion.div>
 
         {/* Category Breakdown */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
@@ -278,10 +278,10 @@ const StaffStats: React.FC = () => {
               </div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
 
         {/* Priority Breakdown */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
@@ -312,11 +312,11 @@ const StaffStats: React.FC = () => {
               );
             })}
           </div>
-        </motion.div>
+        </motion.div> */}
       </div>
 
       {/* Performance Chart */}
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.7 }}
@@ -344,7 +344,7 @@ const StaffStats: React.FC = () => {
             );
           })}
         </div>
-      </motion.div>
+      </motion.div> */}
 
       {/* Performance Tips */}
       <motion.div

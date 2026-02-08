@@ -34,7 +34,7 @@ interface Ticket {
   description: string;
   category: "technical" | "billing" | "account" | "feature" | "bug" | "other";
   priority: "low" | "medium" | "high" | "urgent";
-  status: "pending" | "accepted" | "in-progress" | "resolved" | "closed";
+  status: "open" | "pending" | "accepted" | "in-progress" | "resolved" | "closed";
   assignedTo:
     | string
     | {

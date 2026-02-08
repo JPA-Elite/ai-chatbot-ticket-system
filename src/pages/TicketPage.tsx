@@ -54,7 +54,7 @@ const TicketPage: React.FC = () => {
         </p>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-green-500" />
+            <Clock className="h-4 w-4 text-yellow-500" />
             <span className="text-gray-600">Open</span>
           </div>
           <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ const TicketPage: React.FC = () => {
             <span className="text-gray-600">In Progress</span>
           </div>
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-gray-500" />
+            <CheckCircle className="h-4 w-4 text-green-500" />
             <span className="text-gray-600">Closed</span>
           </div>
         </div>

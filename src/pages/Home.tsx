@@ -5,12 +5,13 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 const Home: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section */}
-      <section className="pt-16 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section className={`pt-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto ${user?.role === "user" ? "pb-24" : "pb-16"
+        }`}>
         <div className="text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -28,7 +29,7 @@ const Home: React.FC = () => {
           >
             Get instant answers with our intelligent chatbot. When more help is needed, we'll create a support ticket to connect you with our team.
           </motion.p>
-          <motion.div
+          {user?.role == 'user' ? (<motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -48,7 +49,7 @@ const Home: React.FC = () => {
                 Log In
               </Link>
             )}
-          </motion.div>
+          </motion.div>) : ''}
         </div>
       </section>
 
@@ -125,45 +126,45 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <TechItem 
-              title="MongoDB" 
-              icon={<DatabaseIcon className="h-8 w-8 text-green-500" />} 
-              description="NoSQL database for flexible data storage" 
+            <TechItem
+              title="MongoDB"
+              icon={<DatabaseIcon className="h-8 w-8 text-green-500" />}
+              description="NoSQL database for flexible data storage"
             />
-            <TechItem 
-              title="Express.js" 
-              icon={<ServerIcon className="h-8 w-8 text-gray-700" />} 
-              description="Backend web application framework" 
+            <TechItem
+              title="Express.js"
+              icon={<ServerIcon className="h-8 w-8 text-gray-700" />}
+              description="Backend web application framework"
             />
-            <TechItem 
-              title="React" 
-              icon={<ReactIcon className="h-8 w-8 text-blue-400" />} 
-              description="Frontend user interface library" 
+            <TechItem
+              title="React"
+              icon={<ReactIcon className="h-8 w-8 text-blue-400" />}
+              description="Frontend user interface library"
             />
-            <TechItem 
-              title="Node.js" 
-              icon={<ServerIcon className="h-8 w-8 text-green-600" />} 
-              description="JavaScript runtime environment" 
+            <TechItem
+              title="Node.js"
+              icon={<ServerIcon className="h-8 w-8 text-green-600" />}
+              description="JavaScript runtime environment"
             />
-            <TechItem 
-              title="GPT-4" 
-              icon={<BrainIcon className="h-8 w-8 text-purple-500" />} 
-              description="Advanced AI language model" 
+            <TechItem
+              title="GPT-4"
+              icon={<BrainIcon className="h-8 w-8 text-purple-500" />}
+              description="Advanced AI language model"
             />
-            <TechItem 
-              title="Socket.io" 
-              icon={<BoltIcon className="h-8 w-8 text-yellow-500" />} 
-              description="Real-time bidirectional communication" 
+            <TechItem
+              title="Socket.io"
+              icon={<BoltIcon className="h-8 w-8 text-yellow-500" />}
+              description="Real-time bidirectional communication"
             />
-            <TechItem 
-              title="JWT" 
-              icon={<KeyIcon className="h-8 w-8 text-blue-500" />} 
-              description="Secure authentication system" 
+            <TechItem
+              title="JWT"
+              icon={<KeyIcon className="h-8 w-8 text-blue-500" />}
+              description="Secure authentication system"
             />
-            <TechItem 
-              title="Tailwind CSS" 
-              icon={<PaintbrushIcon className="h-8 w-8 text-teal-500" />} 
-              description="Utility-first CSS framework" 
+            <TechItem
+              title="Tailwind CSS"
+              icon={<PaintbrushIcon className="h-8 w-8 text-teal-500" />}
+              description="Utility-first CSS framework"
             />
           </div>
         </div>
@@ -189,10 +190,10 @@ const Home: React.FC = () => {
 };
 
 // Tech Item Component
-const TechItem: React.FC<{ title: string; icon: React.ReactNode; description: string }> = ({ 
-  title, 
-  icon, 
-  description 
+const TechItem: React.FC<{ title: string; icon: React.ReactNode; description: string }> = ({
+  title,
+  icon,
+  description
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -213,43 +214,43 @@ const TechItem: React.FC<{ title: string; icon: React.ReactNode; description: st
 const ServerIcon = Server;
 const DatabaseIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M12 2C6.5 2 2 3.8 2 6v12c0 2.2 4.5 4 10 4s10-1.8 10-4V6c0-2.2-4.5-4-10-4z"/>
-    <path d="M2 6v4c0 2.2 4.5 4 10 4s10-1.8 10-4V6"/>
-    <path d="M2 14v4c0 2.2 4.5 4 10 4s10-1.8 10-4v-4"/>
+    <path d="M12 2C6.5 2 2 3.8 2 6v12c0 2.2 4.5 4 10 4s10-1.8 10-4V6c0-2.2-4.5-4-10-4z" />
+    <path d="M2 6v4c0 2.2 4.5 4 10 4s10-1.8 10-4V6" />
+    <path d="M2 14v4c0 2.2 4.5 4 10 4s10-1.8 10-4v-4" />
   </svg>
 );
 
 const ReactIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="2"/>
-    <path d="M12 6a9.77 9.77 0 0 0-8.82 5.5C3.83 13.75 7.53 16 12 16s8.17-2.25 8.82-4.5A9.77 9.77 0 0 0 12 6z"/>
-    <path d="M12 18c-4.47 0-8.17-2.25-8.82-4.5S7.53 8 12 8s8.17 2.25 8.82 4.5S16.47 18 12 18z"/>
+    <circle cx="12" cy="12" r="2" />
+    <path d="M12 6a9.77 9.77 0 0 0-8.82 5.5C3.83 13.75 7.53 16 12 16s8.17-2.25 8.82-4.5A9.77 9.77 0 0 0 12 6z" />
+    <path d="M12 18c-4.47 0-8.17-2.25-8.82-4.5S7.53 8 12 8s8.17 2.25 8.82 4.5S16.47 18 12 18z" />
   </svg>
 );
 
 const BrainIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44A2.5 2.5 0 0 1 4.5 17v-2.5a2.5 2.5 0 0 1 0-5V7a2.5 2.5 0 0 1 5-5Z"/>
-    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44A2.5 2.5 0 0 0 19.5 17v-2.5a2.5 2.5 0 0 0 0-5V7a2.5 2.5 0 0 0-5-5Z"/>
+    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44A2.5 2.5 0 0 1 4.5 17v-2.5a2.5 2.5 0 0 1 0-5V7a2.5 2.5 0 0 1 5-5Z" />
+    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44A2.5 2.5 0 0 0 19.5 17v-2.5a2.5 2.5 0 0 0 0-5V7a2.5 2.5 0 0 0-5-5Z" />
   </svg>
 );
 
 const BoltIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
   </svg>
 );
 
 const KeyIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
   </svg>
 );
 
 const PaintbrushIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M19 9c0 1.5-1.5 3-3 3s-3-1.5-3-3 1.5-3 3-3 3 1.5 3 3z"/>
-    <path d="M13 12.2l-8.7 8.7A2 2 0 0 1 3 20.4L5.6 22a2 2 0 0 1 .5-1.3L15 12"/>
+    <path d="M19 9c0 1.5-1.5 3-3 3s-3-1.5-3-3 1.5-3 3-3 3 1.5 3 3z" />
+    <path d="M13 12.2l-8.7 8.7A2 2 0 0 1 3 20.4L5.6 22a2 2 0 0 1 .5-1.3L15 12" />
   </svg>
 );
 
