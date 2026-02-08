@@ -1,4 +1,4 @@
-import { getCurrentUser, loginUser, registerUser } from '../services/authService.js';
+import { getCurrentUser, loginUser, registerUser, updateUserProfile } from '../services/authService.js';
 import { SERVER_ERROR_MESSAGE } from '../constants/controllerMessages.js';
 
 // @desc    Register user
@@ -39,6 +39,22 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const result = await getCurrentUser(req.user.id);
+    res.status(result.status).json(result.payload);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: SERVER_ERROR_MESSAGE
+    });
+  }
+};
+
+// @desc    Update current user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+export const updateProfile = async (req, res) => {
+  try {
+    const result = await updateUserProfile(req.user.id, req.body);
     res.status(result.status).json(result.payload);
   } catch (error) {
     console.error(error);

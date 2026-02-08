@@ -184,6 +184,14 @@ const Header: React.FC = () => {
                     </div>
                   )}
 
+                  <Link
+                    to="/profile"
+                    className="text-gray-600 hover:text-blue-500 px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                  >
+                    <User className="h-5 w-5 mr-1" />
+                    <span>Profile</span>
+                  </Link>
+
                   <div className="relative ml-3">
                     <div className="flex items-center">
                       <button

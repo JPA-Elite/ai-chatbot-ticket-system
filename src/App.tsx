@@ -19,6 +19,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import TicketDetails from './pages/admin/TicketDetails';
 import StaffDashboard from './pages/admin/StaffDashboard';
 import StaffStats from './pages/StaffStats';
+import Profile from './pages/Profile';
 
 // Context
 import { AuthProvider } from './context/AuthContext';
@@ -94,6 +95,11 @@ function App() {
                     <AdminRoute>
                       <TicketDetails isAdmin={true} />
                     </AdminRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <PrivateRoute>
+                      <Profile />
+                    </PrivateRoute>
                   } />
                 </Routes>
               </main>

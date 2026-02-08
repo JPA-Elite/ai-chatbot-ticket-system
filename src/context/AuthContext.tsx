@@ -25,6 +25,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -144,6 +145,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setIsAdmin(false);
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser((prevUser) => {
+      if (!prevUser) return prevUser;
+      return { ...prevUser, ...updates };
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -154,6 +162,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         loading,
         login,
         register,
+        updateUser,
         logout,
       }}
     >
