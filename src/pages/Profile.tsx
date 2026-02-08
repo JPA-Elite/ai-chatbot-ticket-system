@@ -69,14 +69,14 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-50">
+    <div className="flex items-center justify-center px-4 py-12 bg-gray-50">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-7xl"
       >
-        <div className="bg-white p-8 rounded-lg shadow-md">
+        <div className="bg-white p-20 rounded-lg shadow-md">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -220,7 +220,7 @@ const Profile: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`inline-flex items-center justify-center px-6 py-2 bg-blue-500 text-white font-medium rounded-lg ${
+                className={`inline-flex items-center justify-center px-6 py-2 bg-blue-500 text-white font-medium rounded-lg text-sm ${
                   isSubmitting
                     ? "opacity-70 cursor-not-allowed"
                     : "hover:bg-blue-600"
