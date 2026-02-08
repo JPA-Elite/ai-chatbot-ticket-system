@@ -33,8 +33,9 @@ interface Ticket {
   title: string;
   description: string;
   category: "technical" | "billing" | "account" | "feature" | "bug" | "other";
+  tag?: string;
   priority: "low" | "medium" | "high" | "urgent";
-  status: "open" | "pending" | "accepted" | "in-progress" | "resolved" | "closed";
+  status: "open" | "pending" | "accepted" | "in-progress" | "resolved" | "closed" | "rejected";
   assignedTo:
     | string
     | {
@@ -53,6 +54,25 @@ interface Ticket {
       }
     | null;
   acceptedAt: Date | null;
+  rejectedBy:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+      }
+    | null;
+  rejectedAt: Date | null;
+  rejectionReason?: string;
+  forwardedTo:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+      }
+    | null;
+  forwardedAt: Date | null;
   messages: TicketMessage[];
   createdAt: Date;
   updatedAt: Date;
@@ -75,6 +95,8 @@ interface TicketContextType {
   classifyTicket: (id: string) => Promise<void>;
   acceptTicket: (id: string) => Promise<void>;
   endConversation: (id: string) => Promise<void>;
+  rejectTicket: (id: string, reason: string) => Promise<void>;
+  forwardTicket: (id: string, staffId: string) => Promise<void>;
   clearCurrentTicket: () => void;
   pagination: {
     page: number;
@@ -354,6 +376,72 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const rejectTicket = async (id: string, reason: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(
+        `${API_BASE_URL}/api/tickets/${id}/reject`,
+        { reason },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+        setTickets((prevTickets) =>
+          prevTickets.map((ticket) =>
+            ticket._id === id ? res.data.data : ticket,
+          ),
+        );
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Error rejecting ticket";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const forwardTicket = async (id: string, staffId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await axios.post(
+        `${API_BASE_URL}/api/tickets/${id}/forward`,
+        { staffId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (res.data.success) {
+        setCurrentTicket(res.data.data);
+        setTickets((prevTickets) =>
+          prevTickets.map((ticket) =>
+            ticket._id === id ? res.data.data : ticket,
+          ),
+        );
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Error forwarding ticket";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearCurrentTicket = () => {
     setCurrentTicket(null);
   };
@@ -373,6 +461,8 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
         classifyTicket,
         acceptTicket,
         endConversation,
+        rejectTicket,
+        forwardTicket,
         clearCurrentTicket,
         pagination,
       }}

@@ -1,5 +1,7 @@
 import { classifyTicket } from '../services/aiService.js';
-import { sendTicketAcceptedToStudent } from '../services/emailService.js';
+import { sendTicketAcceptedToStudent, sendTicketRejectedToStudent, sendTicketForwardedToStaff } from '../services/emailService.js';
+import Ticket from '../models/Ticket.js';
+import User from '../models/User.js';
 import {
   MESSAGE_CONTENT_REQUIRED_MESSAGE,
   TICKET_ACCEPT_NOT_AUTHORIZED_MESSAGE,
@@ -187,11 +189,26 @@ export const acceptTicketData = async ({ id, user }) => {
     return { status: 404, payload: { success: false, message: TICKET_NOT_FOUND_MESSAGE } };
   }
 
-  if (ticket.status !== 'pending') {
+const isForwardedToMe = ticket.forwardedTo && ticket.forwardedTo.toString() === user.id;
+  
+  if (ticket.status !== 'pending' && !isForwardedToMe) {
     return {
       status: 400,
       payload: { success: false, message: TICKET_ALREADY_ACCEPTED_MESSAGE }
     };
+  }
+  
+  if (isForwardedToMe && (ticket.status === 'accepted' || ticket.status === 'in-progress')) {
+    ticket.status = 'accepted';
+    ticket.acceptedBy = user.id;
+    ticket.acceptedAt = new Date();
+    ticket.assignedTo = user.id;
+    ticket.forwardedTo = null;
+    ticket.forwardedAt = null;
+    await saveTicket(ticket);
+
+    const updatedTicket = await findTicketById(id);
+    return { status: 200, payload: { success: true, data: updatedTicket } };
   }
 
   if (user.role === 'staff') {
@@ -200,7 +217,11 @@ export const acceptTicketData = async ({ id, user }) => {
     const myTags = (me?.tags || []).map(t => String(t).trim());
 
     const ticketTag = String(ticket.tag || '').trim();
-    const allowed = ticketTag && myTags.includes(ticketTag);
+    const isForwardedToMe = ticket.forwardedTo && ticket.forwardedTo.toString() === user.id;
+    const isAssignedToMe = ticket.assignedTo && ticket.assignedTo.toString() === user.id;
+    const hasMatchingTag = ticketTag && myTags.includes(ticketTag);
+
+    const allowed = isForwardedToMe || isAssignedToMe || hasMatchingTag;
 
     if (!allowed) {
       return {
@@ -238,16 +259,141 @@ export const endConversationData = async ({ id, user }) => {
     return { status: 404, payload: { success: false, message: TICKET_NOT_FOUND_MESSAGE } };
   }
 
-  if (user.role !== 'admin' && user.role !== 'staff') {
+  const isStaff = user.role === 'admin' || user.role === 'staff';
+  const ticketUserId = ticket.userId._id ? ticket.userId._id.toString() : ticket.userId.toString();
+  const isOwner = ticketUserId === user.id;
+
+  if (!isStaff && !isOwner) {
     return {
       status: 403,
       payload: { success: false, message: TICKET_END_CONVERSATION_NOT_AUTHORIZED_MESSAGE }
     };
   }
 
-  ticket.status = 'resolved';
-  await saveTicket(ticket);
-  const updatedTicket = await findTicketById(id);
+  if (ticket.status === 'resolved' || ticket.status === 'closed' || ticket.status === 'rejected') {
+    const updatedTicket = await findTicketById(id);
+    return { status: 200, payload: { success: true, data: updatedTicket } };
+  }
 
+  if (isOwner && !isStaff) {
+    ticket.messages.push({
+      sender: user.id,
+      content: 'Student marked this conversation as satisfied ✅ Conversation closed.'
+    });
+    ticket.status = 'closed';
+  } else if (isStaff) {
+    ticket.messages.push({
+      sender: user.id,
+      content: 'Conversation closed by staff ✅'
+    });
+    ticket.status = 'closed';
+  }
+
+  await saveTicket(ticket);
+
+  const updatedTicket = await findTicketById(id);
   return { status: 200, payload: { success: true, data: updatedTicket } };
+};
+
+export const rejectTicketData = async ({ id, user, reason }) => {
+  const ticket = await findTicketByIdRaw(id);
+
+  if (!ticket) {
+    return {
+      status: 404,
+      payload: { success: false, message: TICKET_NOT_FOUND_MESSAGE }
+    };
+  }
+
+  if (ticket.status === 'resolved' || ticket.status === 'closed' || ticket.status === 'rejected') {
+    return {
+      status: 400,
+      payload: { success: false, message: 'Conversation already closed' }
+    };
+  }
+
+
+  if (user.role !== 'admin' && user.role !== 'staff') {
+    return {
+      status: 403,
+      payload: { success: false, message: 'Not authorized' }
+    };
+  }
+
+  ticket.status = 'rejected';
+  ticket.rejectedBy = user.id;
+  ticket.rejectedAt = new Date();
+  ticket.rejectionReason = reason || 'No reason provided';
+
+  await saveTicket(ticket);
+
+  const populatedTicket = await findTicketById(id);
+
+  try {
+    const studentName = populatedTicket.userId?.name || 'Student';
+    const studentEmail = populatedTicket.userId?.email || '';
+    const staffName = user.name || 'Staff';
+
+    if (studentEmail) {
+      await sendTicketRejectedToStudent(
+        populatedTicket,
+        studentName,
+        studentEmail,
+        staffName,
+        reason
+      );
+    }
+  } catch (emailError) {
+    console.error('Error sending rejection email:', emailError);
+  }
+
+  return {
+    status: 200,
+    payload: { success: true, data: populatedTicket }
+  };
+};
+
+export const forwardTicketData = async ({ id, user, staffId }) => {
+  const ticket = await findTicketByIdRaw(id);
+
+  if (!ticket) {
+    return {
+      status: 404,
+      payload: { success: false, message: TICKET_NOT_FOUND_MESSAGE }
+    };
+  }
+
+  if (user.role !== 'admin' && user.role !== 'staff') {
+    return {
+      status: 403,
+      payload: { success: false, message: 'Not authorized' }
+    };
+  }
+
+  ticket.assignedTo = staffId;
+  ticket.forwardedTo = staffId;
+  ticket.forwardedAt = new Date();
+
+  await saveTicket(ticket);
+
+  const populatedTicket = await findTicketById(id);
+
+  try {
+    const forwardedStaff = await User.findById(staffId);
+
+    if (forwardedStaff && forwardedStaff.email) {
+      await sendTicketForwardedToStaff(
+        populatedTicket,
+        forwardedStaff.name,
+        forwardedStaff.email
+      );
+    }
+  } catch (emailError) {
+    console.error('Error sending forward email:', emailError);
+  }
+
+  return {
+    status: 200,
+    payload: { success: true, data: populatedTicket }
+  };
 };
