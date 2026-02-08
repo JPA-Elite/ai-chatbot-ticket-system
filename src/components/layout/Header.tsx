@@ -34,16 +34,21 @@ const Header: React.FC = () => {
     setLastSeen(Number.isFinite(n) ? n : 0);
   }, [isStaff, LAST_SEEN_KEY]);
 
+  // useEffect(() => {
+  //   if (!isAuthenticated || !isStaff) return;
+
+  //   getAllTickets();
+
+  //   const interval = setInterval(() => {
+  //     getAllTickets();
+  //   }, 5000);
+
+  //   return () => clearInterval(interval);
+  // }, [isAuthenticated, isStaff]);
+
   useEffect(() => {
     if (!isAuthenticated || !isStaff) return;
-
     getAllTickets();
-
-    const interval = setInterval(() => {
-      getAllTickets();
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, [isAuthenticated, isStaff]);
 
   useEffect(() => {
