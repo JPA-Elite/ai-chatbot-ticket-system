@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTicket } from "../../context/TicketContext";
+import { truncateText } from "../../utils/utils";
 
 const Header: React.FC = () => {
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
@@ -199,7 +200,7 @@ const Header: React.FC = () => {
                       </Link>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-gray-700">
-                          {user?.name}
+                          {truncateText(user?.name)}
                         </p>
                         <p className="text-xs text-gray-500">{user?.role}</p>
                       </div>
