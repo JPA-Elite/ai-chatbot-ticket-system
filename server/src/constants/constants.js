@@ -249,6 +249,9 @@ Routing/escalation is REQUIRED if the user:
 - reports issues beyond chatbot scope (bugs, errors, account, payment, billing)
 
 Examples that MUST return YES:
+- "Can you help me assist me"
+- "I need assistance please help me"
+- "Can you help me, I don't know how to do"
 - "i would like assistance for your staff"
 - "can you help me how to assist me for the staff here"
 - "who are the staff can i talk with"
