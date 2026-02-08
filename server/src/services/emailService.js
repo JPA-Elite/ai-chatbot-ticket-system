@@ -98,7 +98,7 @@ export const sendTicketCreatedToStaff = async (ticket, studentName, studentEmail
 
   await sendEmail({
     to: staffEmails,
-    subject: `[New Ticket] ${ticket.title} - ${String(ticket.priority || "").toUpperCase()}`,
+    subject: `[New Ticket] ${ticket.title}`,
     html,
     meta: {
       ticketId: ticket._id,
@@ -262,7 +262,7 @@ export const sendTicketForwardedToStaff = async (ticket, staffName, staffEmail) 
 
   await sendEmail({
     to: staffEmail,
-    subject: `[Forwarded Ticket] ${ticket.title} - ${String(ticket.priority || "").toUpperCase()}`,
+    subject: `[Forwarded Ticket] ${ticket.title}`,
     html,
     meta: {
       ticketId: ticket._id,
