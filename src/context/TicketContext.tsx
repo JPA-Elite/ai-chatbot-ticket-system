@@ -121,15 +121,15 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({
   });
   const { isAuthenticated, token, isAdmin } = useAuth();
  
-  useEffect(() => {
-    if (isAuthenticated && tickets.length === 0) {
-      if (isAdmin) {
-        getAllTickets();
-      } else {
-        getUserTickets();
-      }
-    }
-  }, [isAuthenticated]);
+  // useEffect(() => {
+  //   if (isAuthenticated && tickets.length === 0) {
+  //     if (isAdmin) {
+  //       getAllTickets();
+  //     } else {
+  //       getUserTickets();
+  //     }
+  //   }
+  // }, [isAuthenticated]);
  
   const getUserTickets = async () => {
     try {

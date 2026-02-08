@@ -24,22 +24,12 @@ const TicketPage: React.FC = () => {
   const isStaff = user?.role === "admin" || user?.role === "staff";
 
   useEffect(() => {
-    const loadTickets = () => {
-      if (isStaff) {
-        getAllTickets();
-      } else {
-        getUserTickets();
-      }
-    };
-
-    loadTickets();
-
-    const intervalId = setInterval(() => {
-      loadTickets();
-    }, 5000);
-
-    return () => clearInterval(intervalId);
-  }, [isStaff]);
+    if (isStaff) {
+      getAllTickets();
+    } else {
+      getUserTickets();
+    }
+  }, []);
 
   const loadAvailableStaff = async () => {
     try {
@@ -50,7 +40,9 @@ const TicketPage: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        const filteredStaff = data.data.filter((staff: any) => staff._id !== user?.id);
+        const filteredStaff = data.data.filter((staff: any) => 
+          staff._id !== user?.id && staff.role === 'staff'
+        );
         setAvailableStaff(filteredStaff);
       }
     } catch (error) {
@@ -180,7 +172,7 @@ const TicketPage: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto"
           onClick={() => !isForwarding && setShowForwardModal(false)}
         >
           <motion.div
@@ -188,15 +180,15 @@ const TicketPage: React.FC = () => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", duration: 0.3 }}
-            className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl"
+            className="bg-white rounded-lg p-6 max-w-2xl w-full shadow-xl my-8 max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
               Forward Ticket to Staff
             </h3>
-            <p className="text-gray-600 mb-4">Select a staff member to forward this ticket:</p>
+            <p className="text-gray-600 mb-4 text-sm">Select a staff member to forward this ticket:</p>
             
-            <div className="mb-4 max-h-64 overflow-y-auto border border-gray-300 rounded-lg">
+            <div className="mb-4 overflow-y-auto border border-gray-300 rounded-lg flex-1" style={{ maxHeight: 'calc(90vh - 240px)' }}>
               {availableStaff.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
                   No staff members available
@@ -207,29 +199,50 @@ const TicketPage: React.FC = () => {
                     key={staff._id}
                     onClick={() => setSelectedStaffId(staff._id)}
                     disabled={isForwarding}
-                    className={`w-full text-left p-3 border-b border-gray-200 last:border-b-0 transition-colors ${
+                    className={`w-full text-left p-4 border-b border-gray-200 last:border-b-0 transition-colors ${
                       selectedStaffId === staff._id
                         ? "bg-blue-50 border-l-4 border-l-blue-600"
                         : "hover:bg-gray-50"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    <div className="font-medium text-gray-900">{staff.name}</div>
-                    <div className="text-sm text-gray-600">{staff.email}</div>
-                    {staff.department && (
-                      <div className="text-xs text-gray-500 mt-1">{staff.department}</div>
-                    )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 truncate">{staff.name}</div>
+                        <div className="text-sm text-gray-600 truncate mt-0.5">{staff.email}</div>
+                        {staff.department && (
+                          <div className="text-xs text-gray-500 mt-1">{staff.department}</div>
+                        )}
+                        {staff.tags && staff.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {staff.tags.map((tag: string, index: number) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {selectedStaffId === staff._id && (
+                        <div className="flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-blue-600" />
+                        </div>
+                      )}
+                    </div>
                   </button>
                 ))
               )}
             </div>
             
-            {availableStaff.length > 4 && (
-              <p className="text-xs text-gray-500 mb-4">
-                Scroll to see all {availableStaff.length} staff members
+            {availableStaff.length > 3 && (
+              <p className="text-xs text-gray-500 mb-4 text-center">
+                Showing {availableStaff.length} staff member{availableStaff.length !== 1 ? 's' : ''} - Scroll to see all
               </p>
             )}
             
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={() => {
                   setShowForwardModal(false);

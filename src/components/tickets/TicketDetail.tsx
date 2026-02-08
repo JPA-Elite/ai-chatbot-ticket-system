@@ -38,12 +38,6 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
   useEffect(() => {
     if (id) {
       getTicketById(id);
-
-      const interval = setInterval(() => {
-        getTicketById(id);
-      }, 3000);
-
-      return () => clearInterval(interval);
     }
   }, [id]);
 
@@ -269,16 +263,16 @@ const handleSatisfactionResponse = async (satisfied: boolean) => {
               {statusBadge.icon}
               {statusBadge.text}
             </span>
-            <span>•</span>
-            <span
+            {/* <span>•</span> */}
+            {/* <span
               className={`px-3 py-1 rounded-full ${getPriorityBadge(currentTicket.priority)}`}
             >
               {currentTicket.priority.charAt(0).toUpperCase() +
                 currentTicket.priority.slice(1)}
-            </span>
-            <span>•</span>
-            <span className="flex items-center">
-              <svg
+            </span> */}
+            {/* <span>•</span>
+            <span className="flex items-center"> */}
+              {/* <svg
                 className="h-4 w-4 mr-1"
                 fill="none"
                 stroke="currentColor"
@@ -290,9 +284,9 @@ const handleSatisfactionResponse = async (satisfied: boolean) => {
                   strokeWidth={2}
                   d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                 />
-              </svg>
-              {currentTicket.category}
-            </span>
+              </svg> */}
+              {/* {currentTicket.category} */}
+            {/* </span> */}
           </div>
         </div>
       </div>
