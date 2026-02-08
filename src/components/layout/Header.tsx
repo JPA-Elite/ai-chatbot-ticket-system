@@ -186,8 +186,9 @@ const Header: React.FC = () => {
 
                   <div className="relative ml-3">
                     <div className="flex items-center">
-                      <button
-                        type="button"
+                      <Link
+                        to="/profile"
+                        aria-label="Go to profile"
                         className="bg-gray-800 flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-500">
@@ -195,7 +196,7 @@ const Header: React.FC = () => {
                             {user?.name?.charAt(0).toUpperCase()}
                           </span>
                         </span>
-                      </button>
+                      </Link>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-gray-700">
                           {user?.name}
