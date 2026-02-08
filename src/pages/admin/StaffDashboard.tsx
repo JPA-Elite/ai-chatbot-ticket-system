@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, UserPlus, BarChart3, Clock, CheckCircle, AlertTriangle, Star } from 'lucide-react';
+import { Users, UserPlus, BarChart3, Clock, CheckCircle, AlertTriangle, Star, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -35,6 +35,10 @@ const StaffDashboard: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddPassword, setShowAddPassword] = useState(false);
+  const [showAddConfirmPassword, setShowAddConfirmPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [showEditConfirmPassword, setShowEditConfirmPassword] = useState(false);
   const [editStaff, setEditStaff] = useState<{
     _id: string;
     name: string;
@@ -483,7 +487,11 @@ const StaffDashboard: React.FC = () => {
                             isActive: staff.isActive,
                             tags: initialTags,
                             tagsText: tagsToText(initialTags),
+                            password: "",
+                            confirmPassword: "",
                           });
+                          setShowEditPassword(false);
+                          setShowEditConfirmPassword(false);
                           setShowEditModal(true);
                         }}>
                         Edit
@@ -605,25 +613,42 @@ const StaffDashboard: React.FC = () => {
           />
           {addErrors.tags && <p className="text-xs text-red-600">{addErrors.tags}</p>}
 
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full border px-3 py-2 rounded"
-            value={newStaff.password}
-            onChange={e =>
-              setNewStaff({ ...newStaff, password: e.target.value })
-            }
-          />
+          <div className="relative">
+            <input
+              type={showAddPassword ? "text" : "password"}
+              placeholder="Password"
+              className="w-full border px-3 py-2 rounded pr-10"
+              value={newStaff.password}
+              onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowAddPassword(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              aria-label={showAddPassword ? "Hide password" : "Show password"}
+            >
+              {showAddPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
 
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            className="w-full border px-3 py-2 rounded"
-            value={newStaff.confirmPassword}
-            onChange={e =>
-              setNewStaff({ ...newStaff, confirmPassword: e.target.value })
-            }
-          />
+          <div className="relative">
+            <input
+              type={showAddConfirmPassword ? "text" : "password"}
+              placeholder="Confirm Password"
+              className="w-full border px-3 py-2 rounded pr-10"
+              value={newStaff.confirmPassword}
+              onChange={e => setNewStaff({ ...newStaff, confirmPassword: e.target.value })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowAddConfirmPassword(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              aria-label={showAddConfirmPassword ? "Hide password" : "Show password"}
+            >
+              {showAddConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+
 
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -697,25 +722,41 @@ const StaffDashboard: React.FC = () => {
             />
             {editErrors.tags && <p className="text-xs text-red-600">{editErrors.tags}</p>}
 
-            <input
-              type="password"
-              placeholder="New Password (optional)"
-              className="w-full border px-3 py-2 rounded"
-              value={editStaff.password || ''}
-              onChange={e =>
-                setEditStaff({ ...editStaff, password: e.target.value })
-              }
-            />
+            <div className="relative">
+              <input
+                type={showEditPassword ? "text" : "password"}
+                placeholder="New Password (optional)"
+                className="w-full border px-3 py-2 rounded pr-10"
+                value={editStaff.password || ""}
+                onChange={e => setEditStaff({ ...editStaff, password: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowEditPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label={showEditPassword ? "Hide password" : "Show password"}
+              >
+                {showEditPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
 
-            <input
-              type="password"
-              placeholder="Confirm New Password"
-              className="w-full border px-3 py-2 rounded"
-              value={editStaff.confirmPassword || ''}
-              onChange={e =>
-                setEditStaff({ ...editStaff, confirmPassword: e.target.value })
-              }
-            />
+            <div className="relative">
+              <input
+                type={showEditConfirmPassword ? "text" : "password"}
+                placeholder="Confirm New Password (only if changing password)"
+                className="w-full border px-3 py-2 rounded pr-10"
+                value={editStaff.confirmPassword || ""}
+                onChange={e => setEditStaff({ ...editStaff, confirmPassword: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowEditConfirmPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label={showEditConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showEditConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
 
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -818,11 +859,16 @@ const StaffDashboard: React.FC = () => {
   function handleUpdateStaff() {
     if (!editStaff) return;
 
-    if (
-      editStaff.password &&
-      editStaff.password !== editStaff.confirmPassword
-    ) {
-      toast.error('Passwords do not match');
+    const pwd = (editStaff.password || "").trim();
+    const cpwd = (editStaff.confirmPassword || "").trim();
+
+    if (pwd.length > 0 && cpwd.length === 0) {
+      toast.error("Please confirm the new password");
+      return;
+    }
+
+    if (pwd.length > 0 && pwd !== cpwd) {
+      toast.error("Passwords do not match");
       return;
     }
 

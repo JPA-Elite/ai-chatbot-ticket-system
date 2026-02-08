@@ -174,3 +174,117 @@ const getStaffEmails = async () => {
     return [];
   }
 };
+
+export const sendTicketRejectedToStudent = async (ticket, studentName, studentEmail, staffName, reason) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: #ef4444; color: white; padding: 24px;">
+        <h2 style="margin: 0; font-size: 20px;">Your Ticket Has Been Rejected</h2>
+        <p style="margin: 4px 0 0; opacity: 0.85; font-size: 14px;">A staff member has reviewed your request</p>
+      </div>
+      <div style="padding: 24px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px; width: 120px;">Your Name</td>
+            <td style="padding: 10px 0; font-size: 14px;">${studentName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Ticket Title</td>
+            <td style="padding: 10px 0; font-size: 14px;">${ticket.title}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Rejected By</td>
+            <td style="padding: 10px 0; font-size: 14px;">${staffName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Reason</td>
+            <td style="padding: 10px 0; font-size: 14px;">${reason || 'No reason provided'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Status</td>
+            <td style="padding: 10px 0; font-size: 14px; color: #ef4444; font-weight: 600;">Rejected</td>
+          </tr>
+        </table>
+        <p style="margin-top: 20px; font-size: 14px; color: #4b5563;">If you have questions about this rejection, please create a new ticket or contact support directly.</p>
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="${WEB_APP_BASE_URL}/tickets/${ticket._id}" style="display: inline-block; background-color: #ef4444; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Ticket</a>
+        </div>
+      </div>
+      <div style="background-color: #f9fafb; padding: 16px 24px; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">ITSO IT Desk Support System</p>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({
+    to: studentEmail,
+    subject: `[Ticket Update] Your ticket "${ticket.title}" has been rejected`,
+    html,
+    meta: {
+      ticketId: ticket._id,
+      studentName,
+      studentEmail
+    }
+  });
+};
+
+export const sendTicketForwardedToStaff = async (ticket, staffName, staffEmail) => {
+  const studentName = ticket.userId?.name || 'Unknown Student';
+  const studentEmail = ticket.userId?.email || 'N/A';
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: #f59e0b; color: white; padding: 24px;">
+        <h2 style="margin: 0; font-size: 20px;">Ticket Forwarded to You</h2>
+        <p style="margin: 4px 0 0; opacity: 0.85; font-size: 14px;">A ticket has been forwarded for your attention</p>
+      </div>
+      <div style="padding: 24px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px; width: 120px;">Student</td>
+            <td style="padding: 10px 0; font-size: 14px;">${studentName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Email</td>
+            <td style="padding: 10px 0; font-size: 14px;">${studentEmail}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Title</td>
+            <td style="padding: 10px 0; font-size: 14px;">${ticket.title}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Category</td>
+            <td style="padding: 10px 0; font-size: 14px; text-transform: capitalize;">${ticket.category}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Priority</td>
+            <td style="padding: 10px 0; font-size: 14px; text-transform: capitalize;">${ticket.priority}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Description</td>
+            <td style="padding: 10px 0; font-size: 14px;">${ticket.description}</td>
+          </tr>
+        </table>
+        <p style="margin-top: 20px; font-size: 14px; color: #4b5563;">This ticket has been assigned to you. Please review and provide assistance to the student.</p>
+        <div style="margin-top: 24px; text-align: center;">
+          <a href="${WEB_APP_BASE_URL}/admin/tickets/${ticket._id}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Ticket</a>
+        </div>
+      </div>
+      <div style="background-color: #f9fafb; padding: 16px 24px; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">ITSO IT Desk Support System</p>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({
+    to: staffEmail,
+    subject: `[Forwarded Ticket] ${ticket.title} - ${String(ticket.priority || "").toUpperCase()}`,
+    html,
+    meta: {
+      ticketId: ticket._id,
+      staffName,
+      studentName,
+      studentEmail
+    }
+  });
+};

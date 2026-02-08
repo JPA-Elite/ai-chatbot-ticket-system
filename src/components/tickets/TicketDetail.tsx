@@ -16,7 +16,7 @@ interface TicketDetailProps {
   isAdmin?: boolean;
 }
 
-const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
+const TicketDetail: React.FC<TicketDetailProps> = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
@@ -32,6 +32,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showSatisfactionSurvey, setShowSatisfactionSurvey] = useState(false);
+  const [lastSurveyMessageId, setLastSurveyMessageId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (id) {
@@ -46,11 +48,56 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
   }, [id]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [currentTicket?.messages]);
+      if (currentTicket?.messages && currentTicket.messages.length > 0) {
+        setTimeout(() => {
+          scrollToBottom();
+        }, 300);
+      }
+    }, [currentTicket?._id]);
+
+  useEffect(() => {
+    if (!currentTicket) return;
+
+    const studentSide = !(user?.role === "admin" || user?.role === "staff");
+    if (!studentSide) return;
+
+    const isTicketActive =
+      currentTicket.status === "accepted" || currentTicket.status === "in-progress";
+
+    if (!isTicketActive) return;
+
+    const msgs = currentTicket.messages || [];
+    if (msgs.length === 0) return;
+
+    const lastMsg = msgs[msgs.length - 1];
+    const lastMsgFromStaff =
+      lastMsg?.sender?.role === "admin" || lastMsg?.sender?.role === "staff";
+
+    if (!lastMsgFromStaff) return;
+
+    const lastId = lastMsg?._id || `${msgs.length - 1}`;
+    if (lastId === lastSurveyMessageId) return;
+
+    setLastSurveyMessageId(lastId);
+    setShowSatisfactionSurvey(true);
+    
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }, [currentTicket?.messages, currentTicket?.status, user?.role, lastSurveyMessageId]);
+
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current.parentElement;
+      if (container) {
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+        
+        if (isNearBottom || currentTicket?.messages.length === 1) {
+          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    }
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -89,8 +136,24 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
 
     try {
       await endConversation(id);
+      setShowSatisfactionSurvey(true);
     } catch (error) {
       console.error("Error ending conversation:", error);
+    }
+  };
+
+const handleSatisfactionResponse = async (satisfied: boolean) => {
+    setShowSatisfactionSurvey(false);
+
+    if (!id) return;
+
+    try {
+      if (satisfied) {
+        await endConversation(id);
+        navigate("/tickets");
+      }
+    } catch (error) {
+      console.error("Error closing ticket:", error);
     }
   };
 
@@ -153,6 +216,11 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
         icon: <CheckCircle className="h-4 w-4" />,
         text: "Closed",
       },
+      rejected: {
+        color: "bg-red-100 text-red-800",
+        icon: <AlertCircle className="h-4 w-4" />,
+        text: "Rejected",
+      },
     };
     return badges[status as keyof typeof badges] || badges.pending;
   };
@@ -174,7 +242,8 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
     (currentTicket.status === "accepted" ||
       currentTicket.status === "in-progress");
   const isTicketActive =
-    currentTicket.status !== "resolved" && currentTicket.status !== "closed";
+    currentTicket.status === "accepted" || currentTicket.status === "in-progress";
+
 
   const statusBadge = getStatusBadge(currentTicket.status);
 
@@ -274,6 +343,23 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
           </div>
         )}
 
+        {currentTicket.status === "rejected" && !isStaff && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 text-center">
+            <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+            <h3 className="font-semibold text-red-900 mb-1">
+              Ticket Rejected
+            </h3>
+            <p className="text-sm text-red-700 mb-2">
+              This ticket has been rejected by staff.
+            </p>
+            {currentTicket.rejectionReason && (
+              <p className="text-sm text-red-800 font-medium">
+                Reason: {currentTicket.rejectionReason}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
             {currentTicket.messages.length === 0 ? (
@@ -343,6 +429,26 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ isAdmin = false }) => {
               >
                 End Conversation
               </button>
+            </div>
+          )}
+
+          {!isStaff && showSatisfactionSurvey && isTicketActive && (
+            <div className="border-t border-gray-200 p-4 bg-yellow-50">
+              <p className="text-gray-700 font-medium mb-3">Are you satisfied with the support?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleSatisfactionResponse(true)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg py-2 px-4 transition-colors font-medium"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => handleSatisfactionResponse(false)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-lg py-2 px-4 transition-colors font-medium"
+                >
+                  No
+                </button>
+              </div>
             </div>
           )}
 

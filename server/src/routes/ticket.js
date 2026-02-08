@@ -7,7 +7,9 @@ import {
   addTicketMessage,
   classifyTicketAI,
   acceptTicket,
-  endConversation
+  endConversation,
+  rejectTicket,
+  forwardTicket
 } from '../controllers/ticketController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -20,6 +22,8 @@ router.put('/:id', protect, authorize('admin'), updateTicket);
 router.post('/:id/message', protect, addTicketMessage);
 router.post('/:id/classify', protect, authorize('admin'), classifyTicketAI);
 router.post('/:id/accept', protect, authorize('admin', 'staff'), acceptTicket);
-router.post('/:id/end', protect, authorize('admin', 'staff'), endConversation);
+router.post('/:id/end', protect, endConversation);
+router.post('/:id/reject', protect, authorize('admin', 'staff'), rejectTicket);
+router.post('/:id/forward', protect, authorize('admin', 'staff'), forwardTicket);
 
 export default router;

@@ -36,10 +36,32 @@ const TicketSchema = new mongoose.Schema({
     enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium'
   },
-  status: {
+status: {
     type: String,
-    enum: ['pending', 'accepted', 'in-progress', 'resolved', 'closed'],
+    enum: ['pending', 'accepted', 'in-progress', 'resolved', 'closed', 'rejected'],
     default: 'pending'
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  rejectedAt: {
+    type: Date,
+    default: null
+  },
+  rejectionReason: {
+    type: String,
+    default: null
+  },
+  forwardedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  forwardedAt: {
+    type: Date,
+    default: null
   },
   acceptedBy: {
     type: mongoose.Schema.Types.ObjectId,

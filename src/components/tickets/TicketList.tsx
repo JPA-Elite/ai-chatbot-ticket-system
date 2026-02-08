@@ -1,16 +1,23 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Share2, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTicket } from "../../context/TicketContext";
 import { useAuth } from "../../context/AuthContext";
 import { getStatusIcon } from "../utils/utils";
 
-const TicketList: React.FC = () => {
+interface TicketListProps {
+  onForward?: (ticketId: string) => void;
+  onReject?: (ticketId: string) => void;
+}
+
+const TicketList: React.FC<TicketListProps> = ({ onForward, onReject }) => {
   const { tickets, loading } = useTicket();
   const { user } = useAuth();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  const isStaff = user?.role === "admin" || user?.role === "staff";
 
   const handleTicketClick = (id: string) => {
     if (user?.role === "staff") {
@@ -31,6 +38,8 @@ const TicketList: React.FC = () => {
       case "resolved":
       case "closed":
         return "border-gray-400";
+      case "rejected":
+        return "border-red-500";
       default:
         return "border-gray-300";
     }
@@ -93,42 +102,64 @@ const TicketList: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
-            onClick={() => handleTicketClick(ticket._id)}
-            className={`hover:bg-gray-50 cursor-pointer transition-colors border-l-4 ${getStatusBorder(ticket.status)}`}
+            className={`border-l-4 ${getStatusBorder(ticket.status)}`}
           >
             <div className="px-4 py-4 sm:px-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
+                <div
+                  className="flex items-center flex-1 cursor-pointer"
+                  onClick={() => handleTicketClick(ticket._id)}
+                >
                   {getStatusIcon(ticket.status)}
                   <p className="ml-2 text-sm font-medium text-gray-900 truncate max-w-md">
                     {ticket.title}
                   </p>
                 </div>
-                <div className="flex items-center">
-                  {/* <span
-                    className={`px-2 py-1 text-xs rounded-full ${getPriorityClass(ticket.priority)}`}
-                  >
-                    {ticket.priority.charAt(0).toUpperCase() +
-                      ticket.priority.slice(1)}
-                  </span> */}
+                <div className="flex items-center gap-2">
+                  {isStaff &&
+                    ticket.status !== "rejected" &&
+                    ticket.status !== "closed" && (
+                      <>
+                        {onForward && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onForward(ticket._id);
+                            }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Forward ticket"
+                          >
+                            <Share2 className="h-5 w-5" />
+                          </button>
+                        )}
+                        {onReject && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onReject(ticket._id);
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Reject ticket"
+                          >
+                            <XCircle className="h-5 w-5" />
+                          </button>
+                        )}
+                      </>
+                    )}
                   <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
                     {new Date(ticket.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               </div>
-              <div className="mt-2 flex justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 truncate max-w-lg">
-                    {ticket.description.length > 100
-                      ? `${ticket.description.substring(0, 100)}...`
-                      : ticket.description}
-                  </p>
-                </div>
-                {/* <div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                    {ticket.category}
-                  </span>
-                </div> */}
+              <div
+                className="mt-2 cursor-pointer"
+                onClick={() => handleTicketClick(ticket._id)}
+              >
+                <p className="text-sm text-gray-500 truncate max-w-lg">
+                  {ticket.description.length > 100
+                    ? `${ticket.description.substring(0, 100)}...`
+                    : ticket.description}
+                </p>
               </div>
             </div>
           </motion.li>

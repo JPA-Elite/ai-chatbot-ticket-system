@@ -6,7 +6,9 @@ import {
   getAllTicketsData,
   getTicketByIdData,
   getUserTicketsData,
-  updateTicketData
+  updateTicketData,
+  rejectTicketData,
+  forwardTicketData
 } from '../services/ticketService.js';
 import { SERVER_ERROR_MESSAGE } from '../constants/controllerMessages.js';
 
@@ -145,6 +147,40 @@ export const endConversation = async (req, res) => {
     const result = await endConversationData({
       id: req.params.id,
       user: req.user
+    });
+    res.status(result.status).json(result.payload);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: SERVER_ERROR_MESSAGE
+    });
+  }
+};
+
+export const rejectTicket = async (req, res) => {
+  try {
+    const result = await rejectTicketData({
+      id: req.params.id,
+      user: req.user,
+      reason: req.body.reason
+    });
+    res.status(result.status).json(result.payload);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: SERVER_ERROR_MESSAGE
+    });
+  }
+};
+
+export const forwardTicket = async (req, res) => {
+  try {
+    const result = await forwardTicketData({
+      id: req.params.id,
+      user: req.user,
+      staffId: req.body.staffId
     });
     res.status(result.status).json(result.payload);
   } catch (error) {
