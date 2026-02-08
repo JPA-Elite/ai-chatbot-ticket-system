@@ -69,7 +69,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4 py-12 bg-gray-50">
+    <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-50">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -166,7 +166,6 @@ const Profile: React.FC = () => {
                   id="password"
                   type="password"
                   {...register("password", {
-                    required: "Password is required",
                     minLength: {
                       value: 6,
                       message: "Password must be at least 6 characters",
@@ -194,9 +193,12 @@ const Profile: React.FC = () => {
                   id="confirmPassword"
                   type="password"
                   {...register("confirmPassword", {
-                    required: "Please confirm your password",
-                    validate: (value) =>
-                      value === password || "Passwords do not match",
+                    validate: (value) => {
+                      if (!password && !value) {
+                        return true;
+                      }
+                      return value === password || "Passwords do not match";
+                    },
                   })}
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.confirmPassword ? "border-red-500" : "border-gray-300"
@@ -212,7 +214,8 @@ const Profile: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm text-gray-500">
-                Password must be at least 6 characters long.
+                Leave the password fields blank if you do not want to change
+                your password.
               </p>
               <button
                 type="submit"

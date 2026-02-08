@@ -100,7 +100,7 @@ export const updateUserProfile = async (userId, { name, email, password }) => {
     return { status: 400, payload: { success: false, message: 'Please add a valid email' } };
   }
 
-  if (!password || password.length < 6) {
+  if (password && password.length < 6) {
     return { status: 400, payload: { success: false, message: 'Password must be at least 6 characters' } };
   }
 
@@ -116,7 +116,9 @@ export const updateUserProfile = async (userId, { name, email, password }) => {
 
   user.name = trimmedName;
   user.email = normalizedEmail;
-  user.password = password;
+  if (password) {
+    user.password = password;
+  }
   await user.save();
 
   return {
