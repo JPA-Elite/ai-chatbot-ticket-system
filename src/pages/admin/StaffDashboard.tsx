@@ -239,7 +239,7 @@ const StaffDashboard: React.FC = () => {
             </div>
           </motion.div>
 
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -256,7 +256,7 @@ const StaffDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -306,10 +306,10 @@ const StaffDashboard: React.FC = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Rating:</span>
                   <span className="font-medium">{staff.stats.customerRating}/5.0</span>
-                </div>
+                </div> */}
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Resolved:</span>
                   <span className="font-medium">{staff.stats.resolvedTickets}</span>
@@ -366,9 +366,9 @@ const StaffDashboard: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Avg Resolution Time
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Customer Rating
-                </th>
+                </th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Active Tickets
                 </th>
@@ -454,12 +454,12 @@ const StaffDashboard: React.FC = () => {
                         staff.stats.avgResolutionTime <= 6 ? 'Good' : 'Needs Improvement'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Star className="h-4 w-4 text-yellow-400 mr-1" />
                       <span className="text-sm text-gray-900">{staff.stats.customerRating}</span>
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${staff.stats.activeTickets <= 5
                       ? 'bg-green-100 text-green-800'
