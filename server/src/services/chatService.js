@@ -518,7 +518,7 @@ export const sendMessageData = async ({ message, chatId, user }) => {
       chat.escalatedToTicket = true;
       escalated = true;
 
-      const ticket = await Ticket.create({
+      const ticket = await createTicket({
         userId: user.id,
         chatId: chat._id,
         title: `${message.substring(0, TICKET_TITLE_PREVIEW_LENGTH)}...`,
@@ -534,11 +534,11 @@ export const sendMessageData = async ({ message, chatId, user }) => {
       ticketId = ticket._id;
 
       try {
-        const student = await User.findById(user.id).select('name email');
+        const student = await findUserById(user.id).select('name email');
 
         const matchedStaffEmail =
           ticket.assignedTo
-            ? (await User.findById(ticket.assignedTo).select('email'))?.email
+            ? (await findUserById(ticket.assignedTo).select('email'))?.email
             : null;
 
         if (student) {
