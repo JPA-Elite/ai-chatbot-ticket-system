@@ -81,14 +81,6 @@ export const sendTicketCreatedToStaff = async (ticket, studentName, studentEmail
             <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Title</td>
             <td style="padding: 10px 0; font-size: 14px;">${ticket.title}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Category</td>
-            <td style="padding: 10px 0; font-size: 14px; text-transform: capitalize;">${ticket.category}</td>
-          </tr>
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Priority</td>
-            <td style="padding: 10px 0; font-size: 14px; text-transform: capitalize;">${ticket.priority}</td>
-          </tr>
           <tr>
             <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Description</td>
             <td style="padding: 10px 0; font-size: 14px;">${ticket.description}</td>
@@ -251,14 +243,6 @@ export const sendTicketForwardedToStaff = async (ticket, staffName, staffEmail) 
           <tr style="border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Title</td>
             <td style="padding: 10px 0; font-size: 14px;">${ticket.title}</td>
-          </tr>
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Category</td>
-            <td style="padding: 10px 0; font-size: 14px; text-transform: capitalize;">${ticket.category}</td>
-          </tr>
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Priority</td>
-            <td style="padding: 10px 0; font-size: 14px; text-transform: capitalize;">${ticket.priority}</td>
           </tr>
           <tr>
             <td style="padding: 10px 0; font-weight: 600; color: #6b7280; font-size: 13px;">Description</td>
