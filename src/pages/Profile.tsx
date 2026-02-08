@@ -74,7 +74,7 @@ const Profile: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-2xl"
+        className="w-full max-w-7xl"
       >
         <div className="bg-white p-8 rounded-lg shadow-md">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
