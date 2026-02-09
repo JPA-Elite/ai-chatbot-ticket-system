@@ -10,7 +10,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section */}
-      <section className={`pt-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto ${user?.role === "user" ? "pb-24" : "pb-16"
+      <section className={`pt-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto ${!['admin', 'staff'].includes(user?.role || '') ? "pb-24" : "pb-16"
         }`}>
         <div className="text-center">
           <motion.h1
@@ -29,7 +29,7 @@ const Home: React.FC = () => {
           >
             Get instant answers with our intelligent chatbot. When more help is needed, we'll create a support ticket to connect you with our team.
           </motion.p>
-          {user?.role == 'user' ? (<motion.div
+          {!['admin', 'staff'].includes(user?.role || '') ? (<motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -177,12 +177,14 @@ const Home: React.FC = () => {
           <p className="text-lg text-blue-100 mb-8 max-w-3xl mx-auto">
             Join us today and see how our AI-powered support system can help you get answers faster and resolve issues more efficiently.
           </p>
-          <Link
-            to={isAuthenticated ? "/chat" : "/register"}
-            className="inline-block px-6 py-3 bg-white text-blue-500 rounded-lg font-medium hover:bg-blue-50 transition-colors"
-          >
-            {isAuthenticated ? "Start Chatting Now" : "Sign Up For Free"}
-          </Link>
+          {!['admin', 'staff'].includes(user?.role || '') ? (
+            <Link
+              to={isAuthenticated ? "/chat" : "/register"}
+              className="inline-block px-6 py-3 bg-white text-blue-500 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+            >
+              {isAuthenticated ? "Start Chatting Now" : "Sign Up For Free"}
+            </Link>
+          ) : ''}
         </div>
       </section>
     </div>
