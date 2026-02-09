@@ -42,3 +42,5 @@ server/python/*.pyc
 server/python/venv/
 server/python/.venv/
 server/python/env/
+server/python/*.pkl
+server/python/*.jsonl
