@@ -4,9 +4,24 @@ import {
   FILLER_PHRASES,
   GREETING_KEYWORDS,
   GREETING_RESPONSES,
-  RESPOND_TO_ESCALATION_MSG,
+  THANK_YOU_KEYWORDS,
+  THANK_YOU_RESPONSES,
+  THANK_YOU_CLOSING_KEYWORDS,
+  THANK_YOU_CLOSING_RESPONSES,
+  POLITE_NEUTRAL_KEYWORDS,
+  FEEDBACK_POSITIVE_KEYWORDS,
+  FEEDBACK_NEGATIVE_KEYWORDS,
+  ACKNOWLEDGEMENT_KEYWORDS,
+  ACKNOWLEDGEMENT_RESPONSES,
   ESCALATION_NEEDED_MSG,
-  ESCALATION_NEEDED_RESPONSE
+  ESCALATION_NEEDED_RESPONSE,
+  RESPOND_TO_ESCALATION_MSG,
+  GREETING_ONLY_MSG,
+  THANK_YOU_ONLY_MSG,
+  CLOSE_ONLY_MSG,
+  FEEDBACK_POSITIVE_MSG,
+  FEEDBACK_NEGATIVE_MSG,
+  ACKNOWLEDGEMENT_MSG
 } from "../constants/constants.js";
 import {
   createInquiryRelevance,
@@ -40,27 +55,76 @@ const escalationTriggers = [
   "not working", "broken", "complex", "advanced", "specialist", "urgent"
 ];
 
-function isGreetingOnlyMessage(message = "") {
+function detectPoliteOnlyMessageType(message = "") {
   const normalized = String(message)
     .toLowerCase()
     .replace(/[^a-z\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!normalized) return false;
+  if (!normalized) return null;
 
   const words = normalized.split(" ");
-  if (words.length > 6) return false;
+  if (words.length > 12) return null;
 
-  for (let i = words.length; i > 0; i -= 1) {
-    const phrase = words.slice(0, i).join(" ");
-    if (GREETING_KEYWORDS.includes(phrase)) {
-      const remainder = words.slice(i);
-      return remainder.length === 0 || isGreetingOnlyMessage(remainder.join(" "));
+  const phraseTypes = new Map([
+    ...GREETING_KEYWORDS.map((phrase) => [phrase, "greeting"]),
+    ...THANK_YOU_KEYWORDS.map((phrase) => [phrase, "thank"]),
+    ...THANK_YOU_CLOSING_KEYWORDS.map((phrase) => [phrase, "closing"]),
+    ...ACKNOWLEDGEMENT_KEYWORDS.map((phrase) => [phrase, "ack"]),
+    ...POLITE_NEUTRAL_KEYWORDS.map((phrase) => [phrase, "neutral"])
+  ]);
+
+  function walk(remainingWords, hasGreeting = false, hasThank = false, hasClosing = false, hasAck = false) {
+    if (remainingWords.length === 0) {
+      if (hasThank) {
+        return hasClosing ? "thank_closing" : "thank";
+      }
+
+      if (hasGreeting) return "greeting";
+      if (hasAck) return "acknowledgement";
+      return null;
     }
+
+    for (let i = remainingWords.length; i > 0; i -= 1) {
+      const phrase = remainingWords.slice(0, i).join(" ");
+      const type = phraseTypes.get(phrase);
+      if (!type) continue;
+
+      const next = walk(
+        remainingWords.slice(i),
+        hasGreeting || type === "greeting",
+        hasThank || type === "thank",
+        hasClosing || type === "closing",
+        hasAck || type === "ack"
+      );
+
+      if (next) return next;
+    }
+
+    return null;
   }
 
-  return false;
+  return walk(words);
+}
+
+
+function detectFeedbackMessageType(message = "") {
+  const normalized = String(message)
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return null;
+  if (normalized.length > 120) return null;
+
+  const containsPhrase = (phrases = []) => phrases.some((phrase) => normalized.includes(phrase));
+
+  if (containsPhrase(FEEDBACK_NEGATIVE_KEYWORDS)) return "feedback_negative";
+  if (containsPhrase(FEEDBACK_POSITIVE_KEYWORDS)) return "feedback_positive";
+
+  return null;
 }
 
 /**
@@ -72,22 +136,19 @@ function isGreetingOnlyMessage(message = "") {
 export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true, startResponseTime = Date.now()) {
   try {
     const rawMessage = String(latestMessage || "").toLowerCase().trim();
-    const isGreetingOnlyRaw = rawMessage.length <= 40 && isGreetingOnlyMessage(rawMessage);
-
-    if (isGreetingOnlyRaw) {
-      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
-    }
+    const rawPoliteType = rawMessage.length <= 60 ? detectPoliteOnlyMessageType(rawMessage) : null;
 
     const translatedMessage = await detectAndTranslateToEnglish(latestMessage);
     const msg = String(translatedMessage || "").toLowerCase().trim();
-    const isGreetingOnlyTranslated = msg.length <= 40 && isGreetingOnlyMessage(msg);
+    const translatedPoliteType = msg.length <= 60 ? detectPoliteOnlyMessageType(msg) : null;
+    const politeType = rawPoliteType || translatedPoliteType;
 
-    if (isGreetingOnlyTranslated) {
-      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
-    }
+    const rawFeedbackType = detectFeedbackMessageType(rawMessage);
+    const translatedFeedbackType = detectFeedbackMessageType(msg);
+    const feedbackType = rawFeedbackType || translatedFeedbackType;
 
-    const trainingPrediction = await predictTrainingData({ userInquiry: latestMessage });
-    const prediction = trainingPrediction.status === 200 ? trainingPrediction.payload?.prediction : null;
+    const trainingPrediction = (politeType || feedbackType) ? null : await predictTrainingData({ userInquiry: latestMessage });
+    const prediction = trainingPrediction?.status === 200 ? trainingPrediction.payload?.prediction : null;
     if (prediction?.is_escalated && prediction?.confidence >= 0.7) {
       const responseTime = Date.now() - startResponseTime;
       await createInquiryRelevance({
@@ -108,7 +169,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     console.log("AI Escalation Decision:", aiDecision);
 
     // Normalize response and return boolean
-    if (aiDecision.trim().toUpperCase() === "YES") {
+    if (aiDecision.trim().toUpperCase() === "YES" && !politeType && !feedbackType) {
       const responseTime = Date.now() - startResponseTime;
         await createInquiryRelevance({
         userInquiry: latestMessage,
@@ -123,6 +184,49 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
       // if (getRuleBasedResponse(latestMessage)) {
       //   return getRuleBasedResponse(latestMessage);
       // }
+
+      const normalizedDecision = String(aiDecision || "").trim();
+      const nonEscalationResponse = normalizedDecision && normalizedDecision.toUpperCase() !== "YES"
+        ? normalizedDecision
+        : RESPOND_TO_ESCALATION_MSG;
+
+      if (feedbackType) {
+        const feedbackInquiryLabel = feedbackType === "feedback_positive"
+          ? FEEDBACK_POSITIVE_MSG
+          : FEEDBACK_NEGATIVE_MSG;
+        const responseTime = Date.now() - startResponseTime;
+        await createInquiryRelevance({
+          userInquiry: latestMessage,
+          generatedInquiry: feedbackInquiryLabel,
+          generatedResponse: nonEscalationResponse,
+          similarityScore: 1,
+          responsTime: responseTime,
+          isRelevant: 1
+        });
+
+        return nonEscalationResponse;
+      }
+
+      if (politeType) {
+        const politeInquiryLabel = politeType === "greeting"
+          ? GREETING_ONLY_MSG
+          : politeType === "thank_closing"
+            ? CLOSE_ONLY_MSG
+            : politeType === "acknowledgement"
+              ? ACKNOWLEDGEMENT_MSG
+              : THANK_YOU_ONLY_MSG;
+        const responseTime = Date.now() - startResponseTime;
+        await createInquiryRelevance({
+          userInquiry: latestMessage,
+          generatedInquiry: politeInquiryLabel,
+          generatedResponse: nonEscalationResponse,
+          similarityScore: 1,
+          responsTime: responseTime,
+          isRelevant: 1
+        });
+
+        return nonEscalationResponse;
+      }
 
       // From custom inquiries AI training model
       const relevantInquiries = await findRelevantInquiriesAI(latestMessage);
@@ -145,16 +249,16 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
         await createInquiryRelevance({
           userInquiry: latestMessage,
           generatedInquiry: ESCALATION_NEEDED_MSG,
-          generatedResponse: RESPOND_TO_ESCALATION_MSG,
+          generatedResponse: nonEscalationResponse,
           similarityScore: relevantInquiries.length > 0 ? relevantInquiries[0].score : 0,
           responsTime: responseTime,
           isRelevant: 1
         });
 
-        return RESPOND_TO_ESCALATION_MSG;
+        return nonEscalationResponse;
       }
 
-      return aiDecision; // return the AI's response if no escalation needed
+      return nonEscalationResponse;
     }
 
   } catch (error) {
@@ -270,8 +374,21 @@ export function getRuleBasedResponse(message) {
 
   const msg = message.toLowerCase().trim();
 
-  // Greeting detector
-  if (isGreetingOnlyMessage(msg)) {
+  const politeType = detectPoliteOnlyMessageType(msg);
+  if (politeType === "thank" || politeType === "thank_closing") {
+    const responses = politeType === "thank_closing" ? THANK_YOU_CLOSING_RESPONSES : THANK_YOU_RESPONSES;
+    return responses[
+      Math.floor(Math.random() * responses.length)
+    ];
+  }
+
+  if (politeType === "acknowledgement") {
+    return ACKNOWLEDGEMENT_RESPONSES[
+      Math.floor(Math.random() * ACKNOWLEDGEMENT_RESPONSES.length)
+    ];
+  }
+
+  if (politeType === "greeting") {
     return GREETING_RESPONSES[
       Math.floor(Math.random() * GREETING_RESPONSES.length)
     ];

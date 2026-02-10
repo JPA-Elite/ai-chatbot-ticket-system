@@ -22,6 +22,159 @@ export const GREETING_RESPONSES = [
   "Hey! 😊 How may I assist you?"
 ];
 
+export const THANK_YOU_KEYWORDS = [
+  "thanks",
+  "thank you",
+  "thank you so much",
+  "thank you very much",
+  "thanks a lot",
+  "many thanks",
+  "much appreciated",
+  "appreciate it",
+  "appreciate your help",
+  "have a nice day",
+  "have a great day",
+  "have a good day"
+];
+
+export const THANK_YOU_RESPONSES = [
+  "You're welcome! Please ask me anytime if you need help.",
+  "You're very welcome! I'm here whenever you need assistance.",
+  "Anytime! Feel free to ask if there's anything else I can help with.",
+  "Glad I could help! You can always reach out again.",
+  "You're welcome, and have a great day too!"
+];
+
+export const THANK_YOU_CLOSING_KEYWORDS = [
+  "no",
+  "nope",
+  "nah",
+  "nothing",
+  "nothing else",
+  "no nothing else",
+  "thats all",
+  "that s all",
+  "all good",
+  "im good",
+  "i'm good"
+];
+
+export const THANK_YOU_CLOSING_RESPONSES = [
+  "You're welcome! Have a great day.",
+  "You're very welcome. Take care!",
+  "Glad I could help—have a nice day!",
+  "Anytime. Wishing you a great day ahead!"
+];
+
+const asBulletList = (items = []) => items.map(item => `- "${item}"`).join("\n");
+
+export const GREETING_RESPONSE_OPTIONS_TEXT = asBulletList(GREETING_RESPONSES);
+export const THANK_YOU_KEYWORDS_OPTIONS_TEXT = asBulletList(THANK_YOU_KEYWORDS);
+export const THANK_YOU_RESPONSE_OPTIONS_TEXT = asBulletList(THANK_YOU_RESPONSES);
+export const THANK_YOU_CLOSING_RESPONSE_OPTIONS_TEXT = asBulletList(THANK_YOU_CLOSING_RESPONSES);
+
+export const POLITE_NEUTRAL_KEYWORDS = [
+  "ah",
+  "ahh",
+  "ahhh",
+  "okay",
+  "ok",
+  "alright",
+  "sure"
+];
+
+export const FEEDBACK_POSITIVE_KEYWORDS = [
+  "you are correct",
+  "you're correct",
+  "youre correct",
+  "you are right",
+  "you're right",
+  "youre right",
+  "correct",
+  "right",
+  "yes correct",
+  "that is correct",
+  "thats correct",
+  "exactly",
+  "spot on"
+];
+
+export const FEEDBACK_NEGATIVE_KEYWORDS = [
+  "you are wrong",
+  "you're wrong",
+  "youre wrong",
+  "wrong",
+  "nah",
+  "nahh",
+  "no wrong",
+  "not correct",
+  "that is wrong",
+  "thats wrong",
+  "incorrect",
+  "not right"
+];
+
+export const FEEDBACK_POSITIVE_RESPONSES = [
+  "Thanks for confirming! Let me know if you'd like help with anything else.",
+  "Great, thanks for confirming that.",
+  "Awesome—glad that was correct.",
+  "Perfect, thanks for the feedback!",
+  "Noted, thank you for confirming.",
+  "Glad we're aligned. Feel free to ask more.",
+  "Great to hear! I'm here if you need anything else.",
+  "Thanks! Happy to help further anytime.",
+  "Excellent, thanks for validating that.",
+  "Appreciate the confirmation!"
+];
+
+export const FEEDBACK_NEGATIVE_RESPONSES = [
+  "Ah, sorry about that. I might not be able to answer this accurately—please create a support ticket so staff can help.",
+  "You're right, my bad. I can't fully answer this one—please file a ticket for proper assistance.",
+  "Sorry, I got that wrong. Please open a support ticket so a staff member can assist you better.",
+  "Thanks for the correction—sorry! I can't confidently resolve this, so please contact support staff.",
+  "My apologies. I may not have the correct answer here; please submit a ticket for expert help.",
+  "Sorry for that. I can't fully assist on this case—please reach out to support via ticket.",
+  "You're right to flag that. I may be missing details, so please file a support ticket.",
+  "Apologies—my response wasn't accurate. Please create a ticket and our staff will guide you.",
+  "I’m sorry about that. I can't provide a reliable answer here; please contact support staff.",
+  "My bad, and thanks for pointing it out. Please submit a ticket so this can be handled properly."
+];
+
+export const FEEDBACK_POSITIVE_OPTIONS_TEXT = asBulletList(FEEDBACK_POSITIVE_RESPONSES);
+export const FEEDBACK_NEGATIVE_OPTIONS_TEXT = asBulletList(FEEDBACK_NEGATIVE_RESPONSES);
+
+export const ACKNOWLEDGEMENT_KEYWORDS = [
+  "yes",
+  "yes of course",
+  "of course",
+  "sure",
+  "sure thing",
+  "okay",
+  "ok",
+  "alright",
+  "got it",
+  "i got it",
+  "noted",
+  "understood",
+  "sounds good",
+  "that works"
+];
+
+export const ACKNOWLEDGEMENT_RESPONSES = [
+  "Okay, thank you for confirming.",
+  "Got it, thank you!",
+  "Alright, thanks for confirming.",
+  "Noted—thank you.",
+  "Sounds good, thank you!",
+  "Understood, thank you for the update.",
+  "Perfect, thanks for letting me know.",
+  "Great, thank you for confirming.",
+  "Alright, I appreciate the confirmation.",
+  "Okay, thanks! Let me know if you need anything else."
+];
+
+export const ACKNOWLEDGEMENT_RESPONSE_OPTIONS_TEXT = asBulletList(ACKNOWLEDGEMENT_RESPONSES);
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",
@@ -150,6 +303,12 @@ export const FILLER_PHRASES = [
 ];
 
 export const ESCALATION_NEEDED_MSG = "Escalation needed";
+export const GREETING_ONLY_MSG = "Greetings message";
+export const THANK_YOU_ONLY_MSG = "Thank-you message";
+export const CLOSE_ONLY_MSG = "Close message";
+export const FEEDBACK_POSITIVE_MSG = "Positive feedback message";
+export const FEEDBACK_NEGATIVE_MSG = "Negative feedback message";
+export const ACKNOWLEDGEMENT_MSG = "Acknowledgement message";
 export const ESCALATION_NEEDED_RESPONSE = "Conversation requires escalation to human agent.";
 export const RESPOND_TO_ESCALATION_MSG = "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket to our staff."
 
@@ -238,7 +397,34 @@ Decide whether the latest user intent should be routed to staff/ticket handling.
 
 Return format (strict):
 - Return ONLY "YES" when routing/escalation is needed.
-- Otherwise, return ONLY a helpful assistant response text.
+- If latest message is greeting-only, return EXACTLY ONE response from GREETING_RESPONSES below.
+- If latest message is gratitude-only (matches THANK_YOU_KEYWORDS intent), return EXACTLY ONE response from THANK_YOU_RESPONSES below.
+- If latest message is gratitude+closing-only, return EXACTLY ONE response from THANK_YOU_CLOSING_RESPONSES below.
+- If latest message is positive correctness feedback (e.g., "you are correct"), return EXACTLY ONE response from FEEDBACK_POSITIVE_RESPONSES below.
+- If latest message is negative correctness feedback (e.g., "you are wrong", "nahh you're wrong"), return EXACTLY ONE response from FEEDBACK_NEGATIVE_RESPONSES below.
+- If latest message is acknowledgement-only (e.g., "yes of course", "okay", "got it"), return EXACTLY ONE response from ACKNOWLEDGEMENT_RESPONSES below.
+- For all other non-escalation cases, return EXACTLY the RESPOND_TO_ESCALATION_MSG constant.
+
+Allowed GREETING_RESPONSES:
+${GREETING_RESPONSE_OPTIONS_TEXT}
+
+THANK_YOU_KEYWORDS intent hints:
+${THANK_YOU_KEYWORDS_OPTIONS_TEXT}
+
+Allowed THANK_YOU_RESPONSES:
+${THANK_YOU_RESPONSE_OPTIONS_TEXT}
+
+Allowed THANK_YOU_CLOSING_RESPONSES:
+${THANK_YOU_CLOSING_RESPONSE_OPTIONS_TEXT}
+
+Allowed FEEDBACK_POSITIVE_RESPONSES:
+${FEEDBACK_POSITIVE_OPTIONS_TEXT}
+
+Allowed FEEDBACK_NEGATIVE_RESPONSES:
+${FEEDBACK_NEGATIVE_OPTIONS_TEXT}
+
+Allowed ACKNOWLEDGEMENT_RESPONSES:
+${ACKNOWLEDGEMENT_RESPONSE_OPTIONS_TEXT}
 
 Routing/escalation is REQUIRED if the user:
 - asks for a real person, human agent, live support, or support staff
@@ -258,9 +444,18 @@ Examples that MUST return YES:
 - "can you help me file a ticket"
 
 Do NOT escalate for generic non-routing questions like:
-- "can you help me"
 - "hello"
-- normal FAQ questions answerable by the chatbot.`;
+- gratitude/closing-only messages (e.g., "thank you", "thanks", "okay thank you", "no nothing else thank you")
+- greeting-only messages (e.g., "hi", "hello there")
+
+For non-escalation:
+- greeting-only => return exactly one response from GREETING_RESPONSES
+- gratitude-only => return exactly one response from THANK_YOU_RESPONSES
+- gratitude+closing-only => return exactly one response from THANK_YOU_CLOSING_RESPONSES
+- positive correctness feedback => return exactly one response from FEEDBACK_POSITIVE_RESPONSES
+- negative correctness feedback => return exactly one response from FEEDBACK_NEGATIVE_RESPONSES
+- acknowledgement-only => return exactly one response from ACKNOWLEDGEMENT_RESPONSES
+- otherwise return EXACTLY: "${RESPOND_TO_ESCALATION_MSG}"`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
 Return ONLY "YES" if escalation is needed, if not return a response.
