@@ -204,6 +204,9 @@ export const FILLER_PHRASES = [
 ];
 
 export const ESCALATION_NEEDED_MSG = "Escalation needed";
+export const GREETING_ONLY_MSG = "Greetings message";
+export const THANK_YOU_ONLY_MSG = "Thank-you message";
+export const CLOSE_ONLY_MSG = "Close message";
 export const ESCALATION_NEEDED_RESPONSE = "Conversation requires escalation to human agent.";
 export const RESPOND_TO_ESCALATION_MSG = "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket to our staff."
 
@@ -292,7 +295,9 @@ Decide whether the latest user intent should be routed to staff/ticket handling.
 
 Return format (strict):
 - Return ONLY "YES" when routing/escalation is needed.
-- Otherwise, return ONLY a helpful assistant response text.
+- If latest message is greeting-only, return ONLY a short friendly greeting.
+- If latest message is gratitude/closing-only, return ONLY a short polite acknowledgement/farewell.
+- For all other non-escalation cases, return EXACTLY: "Conversation requires escalation to human agent."
 
 Routing/escalation is REQUIRED if the user:
 - asks for a real person, human agent, live support, or support staff
@@ -312,14 +317,14 @@ Examples that MUST return YES:
 - "can you help me file a ticket"
 
 Do NOT escalate for generic non-routing questions like:
-- "can you help me"
 - "hello"
 - gratitude/closing-only messages (e.g., "thank you", "thanks", "okay thank you", "no nothing else thank you")
 - greeting-only messages (e.g., "hi", "hello there")
-- normal FAQ questions answerable by the chatbot.
 
-If the latest message is greeting-only, reply with a short friendly greeting.
-If the latest message is gratitude/closing-only, reply with a short polite acknowledgment and optional farewell.`;
+For non-escalation:
+- greeting-only => short greeting reply only
+- gratitude/closing-only => short polite acknowledgement/farewell only
+- otherwise return EXACTLY: "Conversation requires escalation to human agent."`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
 Return ONLY "YES" if escalation is needed, if not return a response.
