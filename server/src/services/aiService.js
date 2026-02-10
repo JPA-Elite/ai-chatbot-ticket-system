@@ -148,7 +148,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     const feedbackType = rawFeedbackType || translatedFeedbackType;
 
     const trainingPrediction = (politeType || feedbackType) ? null : await predictTrainingData({ userInquiry: latestMessage });
-    const prediction = trainingPrediction.status === 200 ? trainingPrediction.payload?.prediction : null;
+    const prediction = trainingPrediction?.status === 200 ? trainingPrediction.payload?.prediction : null;
     if (prediction?.is_escalated && prediction?.confidence >= 0.7) {
       const responseTime = Date.now() - startResponseTime;
       await createInquiryRelevance({
