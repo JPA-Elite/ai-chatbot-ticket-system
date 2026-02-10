@@ -66,6 +66,16 @@ export const THANK_YOU_CLOSING_RESPONSES = [
   "Anytime. Wishing you a great day ahead!"
 ];
 
+export const POLITE_NEUTRAL_KEYWORDS = [
+  "ah",
+  "ahh",
+  "ahhh",
+  "okay",
+  "ok",
+  "alright",
+  "sure"
+];
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",
@@ -304,7 +314,12 @@ Examples that MUST return YES:
 Do NOT escalate for generic non-routing questions like:
 - "can you help me"
 - "hello"
-- normal FAQ questions answerable by the chatbot.`;
+- gratitude/closing-only messages (e.g., "thank you", "thanks", "okay thank you", "no nothing else thank you")
+- greeting-only messages (e.g., "hi", "hello there")
+- normal FAQ questions answerable by the chatbot.
+
+If the latest message is greeting-only, reply with a short friendly greeting.
+If the latest message is gratitude/closing-only, reply with a short polite acknowledgment and optional farewell.`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
 Return ONLY "YES" if escalation is needed, if not return a response.

@@ -8,6 +8,7 @@ import {
   THANK_YOU_RESPONSES,
   THANK_YOU_CLOSING_KEYWORDS,
   THANK_YOU_CLOSING_RESPONSES,
+  POLITE_NEUTRAL_KEYWORDS,
   RESPOND_TO_ESCALATION_MSG,
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE
@@ -59,7 +60,8 @@ function detectPoliteOnlyMessageType(message = "") {
   const phraseTypes = new Map([
     ...GREETING_KEYWORDS.map((phrase) => [phrase, "greeting"]),
     ...THANK_YOU_KEYWORDS.map((phrase) => [phrase, "thank"]),
-    ...THANK_YOU_CLOSING_KEYWORDS.map((phrase) => [phrase, "closing"])
+    ...THANK_YOU_CLOSING_KEYWORDS.map((phrase) => [phrase, "closing"]),
+    ...POLITE_NEUTRAL_KEYWORDS.map((phrase) => [phrase, "neutral"])
   ]);
 
   function walk(remainingWords, hasGreeting = false, hasThank = false, hasClosing = false) {
@@ -181,17 +183,22 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
       }
 
       if (isRespondToEscalation) {
+        const normalizedDecision = String(aiDecision || "").trim();
+        const fallbackResponse = normalizedDecision && normalizedDecision.toUpperCase() !== "YES"
+          ? normalizedDecision
+          : RESPOND_TO_ESCALATION_MSG;
+
         const responseTime = Date.now() - startResponseTime;
         await createInquiryRelevance({
           userInquiry: latestMessage,
           generatedInquiry: ESCALATION_NEEDED_MSG,
-          generatedResponse: RESPOND_TO_ESCALATION_MSG,
+          generatedResponse: fallbackResponse,
           similarityScore: relevantInquiries.length > 0 ? relevantInquiries[0].score : 0,
           responsTime: responseTime,
           isRelevant: 1
         });
 
-        return RESPOND_TO_ESCALATION_MSG;
+        return fallbackResponse;
       }
 
       return aiDecision; // return the AI's response if no escalation needed
