@@ -66,6 +66,13 @@ export const THANK_YOU_CLOSING_RESPONSES = [
   "Anytime. Wishing you a great day ahead!"
 ];
 
+const asBulletList = (items = []) => items.map(item => `- "${item}"`).join("\n");
+
+export const GREETING_RESPONSE_OPTIONS_TEXT = asBulletList(GREETING_RESPONSES);
+export const THANK_YOU_KEYWORDS_OPTIONS_TEXT = asBulletList(THANK_YOU_KEYWORDS);
+export const THANK_YOU_RESPONSE_OPTIONS_TEXT = asBulletList(THANK_YOU_RESPONSES);
+export const THANK_YOU_CLOSING_RESPONSE_OPTIONS_TEXT = asBulletList(THANK_YOU_CLOSING_RESPONSES);
+
 export const POLITE_NEUTRAL_KEYWORDS = [
   "ah",
   "ahh",
@@ -295,9 +302,22 @@ Decide whether the latest user intent should be routed to staff/ticket handling.
 
 Return format (strict):
 - Return ONLY "YES" when routing/escalation is needed.
-- If latest message is greeting-only, return ONLY a short friendly greeting.
-- If latest message is gratitude/closing-only, return ONLY a short polite acknowledgement/farewell.
+- If latest message is greeting-only, return EXACTLY ONE response from GREETING_RESPONSES below.
+- If latest message is gratitude-only (matches THANK_YOU_KEYWORDS intent), return EXACTLY ONE response from THANK_YOU_RESPONSES below.
+- If latest message is gratitude+closing-only, return EXACTLY ONE response from THANK_YOU_CLOSING_RESPONSES below.
 - For all other non-escalation cases, return EXACTLY the RESPOND_TO_ESCALATION_MSG constant.
+
+Allowed GREETING_RESPONSES:
+${GREETING_RESPONSE_OPTIONS_TEXT}
+
+THANK_YOU_KEYWORDS intent hints:
+${THANK_YOU_KEYWORDS_OPTIONS_TEXT}
+
+Allowed THANK_YOU_RESPONSES:
+${THANK_YOU_RESPONSE_OPTIONS_TEXT}
+
+Allowed THANK_YOU_CLOSING_RESPONSES:
+${THANK_YOU_CLOSING_RESPONSE_OPTIONS_TEXT}
 
 Routing/escalation is REQUIRED if the user:
 - asks for a real person, human agent, live support, or support staff
@@ -322,8 +342,9 @@ Do NOT escalate for generic non-routing questions like:
 - greeting-only messages (e.g., "hi", "hello there")
 
 For non-escalation:
-- greeting-only => short greeting reply only
-- gratitude/closing-only => short polite acknowledgement/farewell only
+- greeting-only => return exactly one response from GREETING_RESPONSES
+- gratitude-only => return exactly one response from THANK_YOU_RESPONSES
+- gratitude+closing-only => return exactly one response from THANK_YOU_CLOSING_RESPONSES
 - otherwise return EXACTLY: "${RESPOND_TO_ESCALATION_MSG}"`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
