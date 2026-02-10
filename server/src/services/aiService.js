@@ -42,50 +42,48 @@ const escalationTriggers = [
   "not working", "broken", "complex", "advanced", "specialist", "urgent"
 ];
 
-function isGreetingOnlyMessage(message = "") {
+function detectPoliteOnlyMessageType(message = "") {
   const normalized = String(message)
     .toLowerCase()
     .replace(/[^a-z\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!normalized) return false;
+  if (!normalized) return null;
 
   const words = normalized.split(" ");
-  if (words.length > 6) return false;
+  if (words.length > 10) return null;
 
-  for (let i = words.length; i > 0; i -= 1) {
-    const phrase = words.slice(0, i).join(" ");
-    if (GREETING_KEYWORDS.includes(phrase)) {
-      const remainder = words.slice(i);
-      return remainder.length === 0 || isGreetingOnlyMessage(remainder.join(" "));
+  const phraseTypes = new Map([
+    ...GREETING_KEYWORDS.map((phrase) => [phrase, "greeting"]),
+    ...THANK_YOU_KEYWORDS.map((phrase) => [phrase, "thank"])
+  ]);
+
+  function walk(remainingWords, hasGreeting = false, hasThank = false) {
+    if (remainingWords.length === 0) {
+      if (hasThank) return "thank";
+      if (hasGreeting) return "greeting";
+      return null;
     }
+
+    for (let i = remainingWords.length; i > 0; i -= 1) {
+      const phrase = remainingWords.slice(0, i).join(" ");
+      const type = phraseTypes.get(phrase);
+      if (!type) continue;
+
+      const next = walk(
+        remainingWords.slice(i),
+        hasGreeting || type === "greeting",
+        hasThank || type === "thank"
+      );
+
+      if (next) return next;
+    }
+
+    return null;
   }
 
-  return false;
-}
-
-function isThankYouOnlyMessage(message = "") {
-  const normalized = String(message)
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!normalized) return false;
-
-  const words = normalized.split(" ");
-  if (words.length > 10) return false;
-
-  for (let i = words.length; i > 0; i -= 1) {
-    const phrase = words.slice(0, i).join(" ");
-    if (THANK_YOU_KEYWORDS.includes(phrase)) {
-      const remainder = words.slice(i);
-      return remainder.length === 0 || isThankYouOnlyMessage(remainder.join(" "));
-    }
-  }
-
-  return false;
+  return walk(words);
 }
 
 /**
@@ -97,28 +95,26 @@ function isThankYouOnlyMessage(message = "") {
 export async function analyzeConversation(chatHistory, latestMessage = "", isRespondToEscalation = true, startResponseTime = Date.now()) {
   try {
     const rawMessage = String(latestMessage || "").toLowerCase().trim();
-    const isGreetingOnlyRaw = rawMessage.length <= 40 && isGreetingOnlyMessage(rawMessage);
+    const rawPoliteType = rawMessage.length <= 60 ? detectPoliteOnlyMessageType(rawMessage) : null;
 
-    if (isGreetingOnlyRaw) {
-      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    if (rawPoliteType === "thank") {
+      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
     }
 
-    const isThankYouOnlyRaw = rawMessage.length <= 60 && isThankYouOnlyMessage(rawMessage);
-    if (isThankYouOnlyRaw) {
-      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
+    if (rawPoliteType === "greeting") {
+      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
     }
 
     const translatedMessage = await detectAndTranslateToEnglish(latestMessage);
     const msg = String(translatedMessage || "").toLowerCase().trim();
-    const isGreetingOnlyTranslated = msg.length <= 40 && isGreetingOnlyMessage(msg);
+    const translatedPoliteType = msg.length <= 60 ? detectPoliteOnlyMessageType(msg) : null;
 
-    if (isGreetingOnlyTranslated) {
-      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    if (translatedPoliteType === "thank") {
+      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
     }
 
-    const isThankYouOnlyTranslated = msg.length <= 60 && isThankYouOnlyMessage(msg);
-    if (isThankYouOnlyTranslated) {
-      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
+    if (translatedPoliteType === "greeting") {
+      return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
     }
 
     const trainingPrediction = await predictTrainingData({ userInquiry: latestMessage });
@@ -305,16 +301,16 @@ export function getRuleBasedResponse(message) {
 
   const msg = message.toLowerCase().trim();
 
-  // Greeting detector
-  if (isGreetingOnlyMessage(msg)) {
-    return GREETING_RESPONSES[
-      Math.floor(Math.random() * GREETING_RESPONSES.length)
+  const politeType = detectPoliteOnlyMessageType(msg);
+  if (politeType === "thank") {
+    return THANK_YOU_RESPONSES[
+      Math.floor(Math.random() * THANK_YOU_RESPONSES.length)
     ];
   }
 
-  if (isThankYouOnlyMessage(msg)) {
-    return THANK_YOU_RESPONSES[
-      Math.floor(Math.random() * THANK_YOU_RESPONSES.length)
+  if (politeType === "greeting") {
+    return GREETING_RESPONSES[
+      Math.floor(Math.random() * GREETING_RESPONSES.length)
     ];
   }
 
