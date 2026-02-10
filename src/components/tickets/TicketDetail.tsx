@@ -31,6 +31,7 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
   const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isAcceptingTicket, setIsAcceptingTicket] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showSatisfactionSurvey, setShowSatisfactionSurvey] = useState(false);
   const [lastSurveyMessageId, setLastSurveyMessageId] = useState<string | undefined>(undefined);
@@ -116,12 +117,16 @@ const TicketDetail: React.FC<TicketDetailProps> = () => {
   };
 
   const handleAcceptTicket = async () => {
-    if (!id) return;
+    if (!id || isAcceptingTicket) return;
+
+    setIsAcceptingTicket(true);
 
     try {
       await acceptTicket(id);
     } catch (error) {
       console.error("Error accepting ticket:", error);
+    } finally {
+      setIsAcceptingTicket(false);
     }
   };
 
@@ -316,9 +321,14 @@ const handleSatisfactionResponse = async (satisfied: boolean) => {
               </div>
               <button
                 onClick={handleAcceptTicket}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                disabled={isAcceptingTicket}
+                className={`px-6 py-2 text-white rounded-lg transition-colors font-medium ${
+                  isAcceptingTicket
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
-                Accept Ticket
+                {isAcceptingTicket ? "Accepting..." : "Accept Ticket"}
               </button>
             </div>
           </div>
