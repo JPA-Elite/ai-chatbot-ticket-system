@@ -96,7 +96,7 @@ function App() {
                       <TicketDetails isAdmin={true} />
                     </AdminRoute>
                   } />
-                  <Route path="/profile" element={
+                  <Route path="/profile-settings" element={
                     <PrivateRoute>
                       <Profile />
                     </PrivateRoute>
