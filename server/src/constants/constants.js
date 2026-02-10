@@ -297,7 +297,7 @@ Return format (strict):
 - Return ONLY "YES" when routing/escalation is needed.
 - If latest message is greeting-only, return ONLY a short friendly greeting.
 - If latest message is gratitude/closing-only, return ONLY a short polite acknowledgement/farewell.
-- For all other non-escalation cases, return EXACTLY: "Conversation requires escalation to human agent."
+- For all other non-escalation cases, return EXACTLY the RESPOND_TO_ESCALATION_MSG constant.
 
 Routing/escalation is REQUIRED if the user:
 - asks for a real person, human agent, live support, or support staff
@@ -324,7 +324,7 @@ Do NOT escalate for generic non-routing questions like:
 For non-escalation:
 - greeting-only => short greeting reply only
 - gratitude/closing-only => short polite acknowledgement/farewell only
-- otherwise return EXACTLY: "Conversation requires escalation to human agent."`;
+- otherwise return EXACTLY: "${RESPOND_TO_ESCALATION_MSG}"`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.
 Return ONLY "YES" if escalation is needed, if not return a response.

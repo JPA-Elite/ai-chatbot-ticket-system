@@ -11,6 +11,7 @@ import {
   POLITE_NEUTRAL_KEYWORDS,
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE,
+  RESPOND_TO_ESCALATION_MSG,
   GREETING_ONLY_MSG,
   THANK_YOU_ONLY_MSG,
   CLOSE_ONLY_MSG
@@ -224,16 +225,16 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
         await createInquiryRelevance({
           userInquiry: latestMessage,
           generatedInquiry: ESCALATION_NEEDED_MSG,
-          generatedResponse: ESCALATION_NEEDED_RESPONSE,
+          generatedResponse: RESPOND_TO_ESCALATION_MSG,
           similarityScore: relevantInquiries.length > 0 ? relevantInquiries[0].score : 0,
           responsTime: responseTime,
           isRelevant: 1
         });
 
-        return ESCALATION_NEEDED_RESPONSE;
+        return RESPOND_TO_ESCALATION_MSG;
       }
 
-      return ESCALATION_NEEDED_RESPONSE;
+      return RESPOND_TO_ESCALATION_MSG;
     }
 
   } catch (error) {
