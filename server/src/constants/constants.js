@@ -22,6 +22,29 @@ export const GREETING_RESPONSES = [
   "Hey! 😊 How may I assist you?"
 ];
 
+export const THANK_YOU_KEYWORDS = [
+  "thanks",
+  "thank you",
+  "thank you so much",
+  "thank you very much",
+  "thanks a lot",
+  "many thanks",
+  "much appreciated",
+  "appreciate it",
+  "appreciate your help",
+  "have a nice day",
+  "have a great day",
+  "have a good day"
+];
+
+export const THANK_YOU_RESPONSES = [
+  "You're welcome! Please ask me anytime if you need help.",
+  "You're very welcome! I'm here whenever you need assistance.",
+  "Anytime! Feel free to ask if there's anything else I can help with.",
+  "Glad I could help! You can always reach out again.",
+  "You're welcome, and have a great day too!"
+];
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",

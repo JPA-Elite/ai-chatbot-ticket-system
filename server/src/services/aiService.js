@@ -4,6 +4,8 @@ import {
   FILLER_PHRASES,
   GREETING_KEYWORDS,
   GREETING_RESPONSES,
+  THANK_YOU_KEYWORDS,
+  THANK_YOU_RESPONSES,
   RESPOND_TO_ESCALATION_MSG,
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE
@@ -63,6 +65,29 @@ function isGreetingOnlyMessage(message = "") {
   return false;
 }
 
+function isThankYouOnlyMessage(message = "") {
+  const normalized = String(message)
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return false;
+
+  const words = normalized.split(" ");
+  if (words.length > 10) return false;
+
+  for (let i = words.length; i > 0; i -= 1) {
+    const phrase = words.slice(0, i).join(" ");
+    if (THANK_YOU_KEYWORDS.includes(phrase)) {
+      const remainder = words.slice(i);
+      return remainder.length === 0 || isThankYouOnlyMessage(remainder.join(" "));
+    }
+  }
+
+  return false;
+}
+
 /**
  * Analyze conversation for escalation using AI
  * @param {Array} chatHistory - Full conversation history
@@ -78,12 +103,22 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
       return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
     }
 
+    const isThankYouOnlyRaw = rawMessage.length <= 60 && isThankYouOnlyMessage(rawMessage);
+    if (isThankYouOnlyRaw) {
+      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
+    }
+
     const translatedMessage = await detectAndTranslateToEnglish(latestMessage);
     const msg = String(translatedMessage || "").toLowerCase().trim();
     const isGreetingOnlyTranslated = msg.length <= 40 && isGreetingOnlyMessage(msg);
 
     if (isGreetingOnlyTranslated) {
       return GREETING_RESPONSES[Math.floor(Math.random() * GREETING_RESPONSES.length)];
+    }
+
+    const isThankYouOnlyTranslated = msg.length <= 60 && isThankYouOnlyMessage(msg);
+    if (isThankYouOnlyTranslated) {
+      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
     }
 
     const trainingPrediction = await predictTrainingData({ userInquiry: latestMessage });
@@ -274,6 +309,12 @@ export function getRuleBasedResponse(message) {
   if (isGreetingOnlyMessage(msg)) {
     return GREETING_RESPONSES[
       Math.floor(Math.random() * GREETING_RESPONSES.length)
+    ];
+  }
+
+  if (isThankYouOnlyMessage(msg)) {
+    return THANK_YOU_RESPONSES[
+      Math.floor(Math.random() * THANK_YOU_RESPONSES.length)
     ];
   }
 
