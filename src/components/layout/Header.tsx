@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   MessageSquare,
@@ -19,6 +19,8 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const LAST_SEEN_KEY = useMemo(() => {
     const uid = (user as any)?.id || (user as any)?._id || "unknown";
@@ -106,6 +108,23 @@ const Header: React.FC = () => {
     setShowLogoutModal(false);
   };
 
+  const handleProfileMenuToggle = () => {
+    setShowProfileMenu((prev) => !prev);
+  };
+
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    return () => document.removeEventListener("mousedown", handleDocumentClick);
+  }, []);
+
   return (
     <>
       <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -190,11 +209,13 @@ const Header: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="relative ml-3">
+                  <div className="relative ml-3" ref={profileMenuRef}>
                     <div className="flex items-center">
-                      <Link
-                        to="/profile"
-                        aria-label="Go to profile"
+                      <button
+                        type="button"
+                        onClick={handleProfileMenuToggle}
+                        aria-label="Open profile menu"
+                        aria-expanded={showProfileMenu}
                         className="bg-gray-800 flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-500">
@@ -202,7 +223,7 @@ const Header: React.FC = () => {
                             {user?.name?.charAt(0).toUpperCase()}
                           </span>
                         </span>
-                      </Link>
+                      </button>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-gray-700">
                           {truncateText(user?.name)}
@@ -210,6 +231,27 @@ const Header: React.FC = () => {
                         <p className="text-xs text-gray-500">{user?.role}</p>
                       </div>
                     </div>
+
+                    {showProfileMenu && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                        <div className="py-1">
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setShowProfileMenu(false)}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Dashboard
+                          </Link>
+                          <Link
+                            to="/profile-settings"
+                            onClick={() => setShowProfileMenu(false)}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Settings
+                          </Link>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
