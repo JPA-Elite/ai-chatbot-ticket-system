@@ -6,6 +6,8 @@ import {
   GREETING_RESPONSES,
   THANK_YOU_KEYWORDS,
   THANK_YOU_RESPONSES,
+  THANK_YOU_CLOSING_KEYWORDS,
+  THANK_YOU_CLOSING_RESPONSES,
   RESPOND_TO_ESCALATION_MSG,
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE
@@ -52,16 +54,20 @@ function detectPoliteOnlyMessageType(message = "") {
   if (!normalized) return null;
 
   const words = normalized.split(" ");
-  if (words.length > 10) return null;
+  if (words.length > 12) return null;
 
   const phraseTypes = new Map([
     ...GREETING_KEYWORDS.map((phrase) => [phrase, "greeting"]),
-    ...THANK_YOU_KEYWORDS.map((phrase) => [phrase, "thank"])
+    ...THANK_YOU_KEYWORDS.map((phrase) => [phrase, "thank"]),
+    ...THANK_YOU_CLOSING_KEYWORDS.map((phrase) => [phrase, "closing"])
   ]);
 
-  function walk(remainingWords, hasGreeting = false, hasThank = false) {
+  function walk(remainingWords, hasGreeting = false, hasThank = false, hasClosing = false) {
     if (remainingWords.length === 0) {
-      if (hasThank) return "thank";
+      if (hasThank) {
+        return hasClosing ? "thank_closing" : "thank";
+      }
+
       if (hasGreeting) return "greeting";
       return null;
     }
@@ -74,7 +80,8 @@ function detectPoliteOnlyMessageType(message = "") {
       const next = walk(
         remainingWords.slice(i),
         hasGreeting || type === "greeting",
-        hasThank || type === "thank"
+        hasThank || type === "thank",
+        hasClosing || type === "closing"
       );
 
       if (next) return next;
@@ -97,8 +104,9 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     const rawMessage = String(latestMessage || "").toLowerCase().trim();
     const rawPoliteType = rawMessage.length <= 60 ? detectPoliteOnlyMessageType(rawMessage) : null;
 
-    if (rawPoliteType === "thank") {
-      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
+    if (rawPoliteType === "thank" || rawPoliteType === "thank_closing") {
+      const responses = rawPoliteType === "thank_closing" ? THANK_YOU_CLOSING_RESPONSES : THANK_YOU_RESPONSES;
+      return responses[Math.floor(Math.random() * responses.length)];
     }
 
     if (rawPoliteType === "greeting") {
@@ -109,8 +117,9 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     const msg = String(translatedMessage || "").toLowerCase().trim();
     const translatedPoliteType = msg.length <= 60 ? detectPoliteOnlyMessageType(msg) : null;
 
-    if (translatedPoliteType === "thank") {
-      return THANK_YOU_RESPONSES[Math.floor(Math.random() * THANK_YOU_RESPONSES.length)];
+    if (translatedPoliteType === "thank" || translatedPoliteType === "thank_closing") {
+      const responses = translatedPoliteType === "thank_closing" ? THANK_YOU_CLOSING_RESPONSES : THANK_YOU_RESPONSES;
+      return responses[Math.floor(Math.random() * responses.length)];
     }
 
     if (translatedPoliteType === "greeting") {
@@ -302,9 +311,10 @@ export function getRuleBasedResponse(message) {
   const msg = message.toLowerCase().trim();
 
   const politeType = detectPoliteOnlyMessageType(msg);
-  if (politeType === "thank") {
-    return THANK_YOU_RESPONSES[
-      Math.floor(Math.random() * THANK_YOU_RESPONSES.length)
+  if (politeType === "thank" || politeType === "thank_closing") {
+    const responses = politeType === "thank_closing" ? THANK_YOU_CLOSING_RESPONSES : THANK_YOU_RESPONSES;
+    return responses[
+      Math.floor(Math.random() * responses.length)
     ];
   }
 

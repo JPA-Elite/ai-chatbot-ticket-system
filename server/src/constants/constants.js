@@ -45,6 +45,27 @@ export const THANK_YOU_RESPONSES = [
   "You're welcome, and have a great day too!"
 ];
 
+export const THANK_YOU_CLOSING_KEYWORDS = [
+  "no",
+  "nope",
+  "nah",
+  "nothing",
+  "nothing else",
+  "no nothing else",
+  "thats all",
+  "that s all",
+  "all good",
+  "im good",
+  "i'm good"
+];
+
+export const THANK_YOU_CLOSING_RESPONSES = [
+  "You're welcome! Have a great day.",
+  "You're very welcome. Take care!",
+  "Glad I could help—have a nice day!",
+  "Anytime. Wishing you a great day ahead!"
+];
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",
