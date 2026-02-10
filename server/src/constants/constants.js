@@ -83,6 +83,66 @@ export const POLITE_NEUTRAL_KEYWORDS = [
   "sure"
 ];
 
+export const FEEDBACK_POSITIVE_KEYWORDS = [
+  "you are correct",
+  "you're correct",
+  "youre correct",
+  "you are right",
+  "you're right",
+  "youre right",
+  "correct",
+  "right",
+  "yes correct",
+  "that is correct",
+  "thats correct",
+  "exactly",
+  "spot on"
+];
+
+export const FEEDBACK_NEGATIVE_KEYWORDS = [
+  "you are wrong",
+  "you're wrong",
+  "youre wrong",
+  "wrong",
+  "nah",
+  "nahh",
+  "no wrong",
+  "not correct",
+  "that is wrong",
+  "thats wrong",
+  "incorrect",
+  "not right"
+];
+
+export const FEEDBACK_POSITIVE_RESPONSES = [
+  "Thanks for confirming! Let me know if you'd like help with anything else.",
+  "Great, thanks for confirming that.",
+  "Awesome—glad that was correct.",
+  "Perfect, thanks for the feedback!",
+  "Noted, thank you for confirming.",
+  "Glad we're aligned. Feel free to ask more.",
+  "Great to hear! I'm here if you need anything else.",
+  "Thanks! Happy to help further anytime.",
+  "Excellent, thanks for validating that.",
+  "Appreciate the confirmation!"
+];
+
+export const FEEDBACK_NEGATIVE_RESPONSES = [
+  "Ah, sorry about that. I might not be able to answer this accurately—please create a support ticket so staff can help.",
+  "You're right, my bad. I can't fully answer this one—please file a ticket for proper assistance.",
+  "Sorry, I got that wrong. Please open a support ticket so a staff member can assist you better.",
+  "Thanks for the correction—sorry! I can't confidently resolve this, so please contact support staff.",
+  "My apologies. I may not have the correct answer here; please submit a ticket for expert help.",
+  "Sorry for that. I can't fully assist on this case—please reach out to support via ticket.",
+  "You're right to flag that. I may be missing details, so please file a support ticket.",
+  "Apologies—my response wasn't accurate. Please create a ticket and our staff will guide you.",
+  "I’m sorry about that. I can't provide a reliable answer here; please contact support staff.",
+  "My bad, and thanks for pointing it out. Please submit a ticket so this can be handled properly."
+];
+
+export const FEEDBACK_POSITIVE_OPTIONS_TEXT = asBulletList(FEEDBACK_POSITIVE_RESPONSES);
+export const FEEDBACK_NEGATIVE_OPTIONS_TEXT = asBulletList(FEEDBACK_NEGATIVE_RESPONSES);
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",
@@ -214,6 +274,8 @@ export const ESCALATION_NEEDED_MSG = "Escalation needed";
 export const GREETING_ONLY_MSG = "Greetings message";
 export const THANK_YOU_ONLY_MSG = "Thank-you message";
 export const CLOSE_ONLY_MSG = "Close message";
+export const FEEDBACK_POSITIVE_MSG = "Positive feedback message";
+export const FEEDBACK_NEGATIVE_MSG = "Negative feedback message";
 export const ESCALATION_NEEDED_RESPONSE = "Conversation requires escalation to human agent.";
 export const RESPOND_TO_ESCALATION_MSG = "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket to our staff."
 
@@ -305,6 +367,8 @@ Return format (strict):
 - If latest message is greeting-only, return EXACTLY ONE response from GREETING_RESPONSES below.
 - If latest message is gratitude-only (matches THANK_YOU_KEYWORDS intent), return EXACTLY ONE response from THANK_YOU_RESPONSES below.
 - If latest message is gratitude+closing-only, return EXACTLY ONE response from THANK_YOU_CLOSING_RESPONSES below.
+- If latest message is positive correctness feedback (e.g., "you are correct"), return EXACTLY ONE response from FEEDBACK_POSITIVE_RESPONSES below.
+- If latest message is negative correctness feedback (e.g., "you are wrong", "nahh you're wrong"), return EXACTLY ONE response from FEEDBACK_NEGATIVE_RESPONSES below.
 - For all other non-escalation cases, return EXACTLY the RESPOND_TO_ESCALATION_MSG constant.
 
 Allowed GREETING_RESPONSES:
@@ -318,6 +382,12 @@ ${THANK_YOU_RESPONSE_OPTIONS_TEXT}
 
 Allowed THANK_YOU_CLOSING_RESPONSES:
 ${THANK_YOU_CLOSING_RESPONSE_OPTIONS_TEXT}
+
+Allowed FEEDBACK_POSITIVE_RESPONSES:
+${FEEDBACK_POSITIVE_OPTIONS_TEXT}
+
+Allowed FEEDBACK_NEGATIVE_RESPONSES:
+${FEEDBACK_NEGATIVE_OPTIONS_TEXT}
 
 Routing/escalation is REQUIRED if the user:
 - asks for a real person, human agent, live support, or support staff
@@ -345,6 +415,8 @@ For non-escalation:
 - greeting-only => return exactly one response from GREETING_RESPONSES
 - gratitude-only => return exactly one response from THANK_YOU_RESPONSES
 - gratitude+closing-only => return exactly one response from THANK_YOU_CLOSING_RESPONSES
+- positive correctness feedback => return exactly one response from FEEDBACK_POSITIVE_RESPONSES
+- negative correctness feedback => return exactly one response from FEEDBACK_NEGATIVE_RESPONSES
 - otherwise return EXACTLY: "${RESPOND_TO_ESCALATION_MSG}"`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.

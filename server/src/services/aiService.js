@@ -9,12 +9,16 @@ import {
   THANK_YOU_CLOSING_KEYWORDS,
   THANK_YOU_CLOSING_RESPONSES,
   POLITE_NEUTRAL_KEYWORDS,
+  FEEDBACK_POSITIVE_KEYWORDS,
+  FEEDBACK_NEGATIVE_KEYWORDS,
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE,
   RESPOND_TO_ESCALATION_MSG,
   GREETING_ONLY_MSG,
   THANK_YOU_ONLY_MSG,
-  CLOSE_ONLY_MSG
+  CLOSE_ONLY_MSG,
+  FEEDBACK_POSITIVE_MSG,
+  FEEDBACK_NEGATIVE_MSG
 } from "../constants/constants.js";
 import {
   createInquiryRelevance,
@@ -98,6 +102,25 @@ function detectPoliteOnlyMessageType(message = "") {
   return walk(words);
 }
 
+
+function detectFeedbackMessageType(message = "") {
+  const normalized = String(message)
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return null;
+  if (normalized.length > 120) return null;
+
+  const containsPhrase = (phrases = []) => phrases.some((phrase) => normalized.includes(phrase));
+
+  if (containsPhrase(FEEDBACK_NEGATIVE_KEYWORDS)) return "feedback_negative";
+  if (containsPhrase(FEEDBACK_POSITIVE_KEYWORDS)) return "feedback_positive";
+
+  return null;
+}
+
 /**
  * Analyze conversation for escalation using AI
  * @param {Array} chatHistory - Full conversation history
@@ -114,7 +137,11 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     const translatedPoliteType = msg.length <= 60 ? detectPoliteOnlyMessageType(msg) : null;
     const politeType = rawPoliteType || translatedPoliteType;
 
-    const trainingPrediction = politeType ? null : await predictTrainingData({ userInquiry: latestMessage });
+    const rawFeedbackType = detectFeedbackMessageType(rawMessage);
+    const translatedFeedbackType = detectFeedbackMessageType(msg);
+    const feedbackType = rawFeedbackType || translatedFeedbackType;
+
+    const trainingPrediction = (politeType || feedbackType) ? null : await predictTrainingData({ userInquiry: latestMessage });
     const prediction = trainingPrediction.status === 200 ? trainingPrediction.payload?.prediction : null;
     if (prediction?.is_escalated && prediction?.confidence >= 0.7) {
       const responseTime = Date.now() - startResponseTime;
@@ -136,7 +163,7 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
     console.log("AI Escalation Decision:", aiDecision);
 
     // Normalize response and return boolean
-    if (aiDecision.trim().toUpperCase() === "YES" && !politeType) {
+    if (aiDecision.trim().toUpperCase() === "YES" && !politeType && !feedbackType) {
       const responseTime = Date.now() - startResponseTime;
         await createInquiryRelevance({
         userInquiry: latestMessage,
@@ -156,6 +183,23 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
       const nonEscalationResponse = normalizedDecision && normalizedDecision.toUpperCase() !== "YES"
         ? normalizedDecision
         : RESPOND_TO_ESCALATION_MSG;
+
+      if (feedbackType) {
+        const feedbackInquiryLabel = feedbackType === "feedback_positive"
+          ? FEEDBACK_POSITIVE_MSG
+          : FEEDBACK_NEGATIVE_MSG;
+        const responseTime = Date.now() - startResponseTime;
+        await createInquiryRelevance({
+          userInquiry: latestMessage,
+          generatedInquiry: feedbackInquiryLabel,
+          generatedResponse: nonEscalationResponse,
+          similarityScore: 1,
+          responsTime: responseTime,
+          isRelevant: 1
+        });
+
+        return nonEscalationResponse;
+      }
 
       if (politeType) {
         const politeInquiryLabel = politeType === "greeting"
