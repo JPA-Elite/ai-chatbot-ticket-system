@@ -37,28 +37,29 @@ const InquiryDashboard: React.FC = () => {
   });
   const { token, user: currentUser } = useAuth();
 
-  // Pagination
+  // Pagination + Filters
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [perPage, setPerPage] = useState(5);
-
+  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  // Import flow
   const [showProcessingModal, setShowProcessingModal] = useState(false);
-  const [processingText, setProcessingText] = useState('Creating possible inquiries based on the uploaded file...');
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [processingText, setProcessingText] = useState(
+    'Creating possible inquiries based on the uploaded file...'
+  );
   const [showSelectCountModal, setShowSelectCountModal] = useState(false);
-  const [selectedInquiryCount, setSelectedInquiryCount] = useState(10); // default 10
+  const [selectedInquiryCount, setSelectedInquiryCount] = useState(10);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isProcessingSuccess, setIsProcessingSuccess] = useState(false);
   const [hasCreatedInquiries, setHasCreatedInquiries] = useState<boolean | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const MAX_FILE_SIZE_MB = 1;
   const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
-
   const fetchInquiries = async (
     page = 1,
-    search = '',
+    search = searchQuery,
     limit = perPage,
     status = statusFilter
   ) => {
@@ -71,22 +72,62 @@ const InquiryDashboard: React.FC = () => {
         params: { page, limit, search, status },
       });
 
-      if (res.data.success) {
-        setInquiries(res.data.data);
-        setCurrentPage(res.data.page);
-        setTotalPages(res.data.totalPages);
-      } else {
-        throw new Error(res.data.message || 'Failed to fetch inquiries');
+      if (!res.data?.success) {
+        throw new Error(res.data?.message || 'Failed to fetch inquiries');
       }
+
+      const pageFromApi = Number(res.data.page || 1);
+      const totalFromApi = Number(res.data.totalPages || 1);
+
+      setInquiries(res.data.data || []);
+      setTotalPages(totalFromApi);
+
+      // ✅ Clamp page based on backend response (prevents page drift after delete/search/import)
+      const safePage = Math.min(Math.max(pageFromApi, 1), totalFromApi);
+      setCurrentPage(safePage);
     } catch (err: any) {
       console.error(err);
-      setError(err.message);
+      setError(err.message || 'Failed to load inquiries');
       toast.error('Failed to load inquiries');
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Backend-driven: refetch whenever any server-side paging inputs change
+  useEffect(() => {
+    fetchInquiries(currentPage, searchQuery, perPage, statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, perPage, statusFilter]);
+
+  const goToPage = (page: number) => {
+    const next = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(next);
+    // optional immediate fetch (useEffect also covers it)
+    fetchInquiries(next, searchQuery, perPage, statusFilter);
+  };
+
+  // Max 3 buttons
+  const getPaginationRange = (current: number, total: number): number[] => {
+    if (total <= 3) return Array.from({ length: total }, (_, i) => i + 1);
+
+    let start = current - 1;
+    let end = current + 1;
+
+    if (start < 1) {
+      start = 1;
+      end = 3;
+    }
+
+    if (end > total) {
+      end = total;
+      start = total - 2;
+    }
+
+    return [start, start + 1, start + 2];
+  };
+
+  // File import handlers
   const handleImportFile = () => {
     fileInputRef.current?.click();
   };
@@ -104,16 +145,13 @@ const InquiryDashboard: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      console.log('TEXT FROM BACKEND ↓↓↓');
-      console.log(data.inquiries);
-
       setProcessingText('Creating inquiries...');
 
-      // simulate creation delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       setIsProcessingSuccess(true);
-      if (data.inquiries && data.inquiries.length > 0) {
+
+      if (data?.inquiries && data.inquiries.length > 0) {
         setHasCreatedInquiries(true);
         setProcessingText('Inquiries created successfully!');
       } else {
@@ -121,15 +159,16 @@ const InquiryDashboard: React.FC = () => {
         setProcessingText('Sorry, no inquiries were created.');
       }
 
-      fetchInquiries();
+      // ✅ After import, refresh from page 1 (safer)
+      setCurrentPage(1);
+      await fetchInquiries(1, searchQuery, perPage, statusFilter);
 
       setTimeout(() => {
         setShowProcessingModal(false);
         setProcessingText('Creating possible inquiries based on the uploaded file...');
         setIsProcessingSuccess(false);
         setHasCreatedInquiries(null);
-      }, 1500);
-
+      }, 1200);
     } catch (err: any) {
       console.error(err);
       toast.error(err.response?.data?.message || err.message || 'Import failed');
@@ -137,7 +176,6 @@ const InquiryDashboard: React.FC = () => {
       setIsProcessingSuccess(false);
     }
   };
-
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -158,132 +196,89 @@ const InquiryDashboard: React.FC = () => {
       return;
     }
 
-    // ✅ Store file temporarily and open select count modal
     setPendingFile(file);
     setShowSelectCountModal(true);
 
-    e.target.value = ''; // reset to allow re-selecting same file later
+    e.target.value = '';
   };
 
-  function handleDeleteInquiry(inquiryId: string) {
-    axios.delete(`${API_BASE_URL}/api/inquiry/${inquiryId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-    })
-      .then(res => {
-        if (res.data.success) {
-          toast.success('Inquiry deleted successfully');
-          fetchInquiries();
-        } else {
-          toast.error(res.data.message || 'Failed to delete inquiry');
-        }
-      })
-      .catch(err => {
-        console.error('Error deleting inquiry:', err);
-        toast.error(err?.response?.data?.message || 'Error deleting inquiry');
+  // CRUD handlers
+  const handleDeleteInquiry = async (inquiryId: string) => {
+    try {
+      const res = await axios.delete(`${API_BASE_URL}/api/inquiry/${inquiryId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-  }
 
-  function handleAddInquiry() {
-    axios.post(`${API_BASE_URL}/api/inquiry`,
-      {
-        promptQuestion: newInquiry.promptQuestion,
-        promptResponse: newInquiry.promptResponse,
-        isEnabled: newInquiry.isEnabled,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+      if (res.data?.success) {
+        toast.success('Inquiry deleted successfully');
+
+        // ✅ refresh same page; backend clamp will correct if last page shrank
+        await fetchInquiries(currentPage, searchQuery, perPage, statusFilter);
+      } else {
+        toast.error(res.data?.message || 'Failed to delete inquiry');
+      }
+    } catch (err: any) {
+      console.error('Error deleting inquiry:', err);
+      toast.error(err?.response?.data?.message || 'Error deleting inquiry');
+    }
+  };
+
+  const handleAddInquiry = async () => {
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/api/inquiry`,
+        {
+          promptQuestion: newInquiry.promptQuestion,
+          promptResponse: newInquiry.promptResponse,
+          isEnabled: newInquiry.isEnabled,
         },
-      })
-      .then(res => {
-        if (res.data.success) {
-          toast.success('Inquiry added successfully');
-          setShowAddModal(false);
-          setNewInquiry({
-            promptQuestion: '',
-            promptResponse: '',
-            isEnabled: true,
-          });
-          fetchInquiries();
-        } else {
-          toast.error(res.data.message || 'Failed to add inquiry');
-        }
-      })
-      .catch(err => {
-        console.error('Error adding inquiry:', err);
-        toast.error(err?.response?.data?.message || 'Error adding inquiry');
-      });
-  }
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-  function handleUpdateInquiry() {
+      if (res.data?.success) {
+        toast.success('Inquiry added successfully');
+        setShowAddModal(false);
+        setNewInquiry({ promptQuestion: '', promptResponse: '', isEnabled: true });
+
+        // ✅ stay on current page, refresh
+        await fetchInquiries(currentPage, searchQuery, perPage, statusFilter);
+      } else {
+        toast.error(res.data?.message || 'Failed to add inquiry');
+      }
+    } catch (err: any) {
+      console.error('Error adding inquiry:', err);
+      toast.error(err?.response?.data?.message || 'Error adding inquiry');
+    }
+  };
+
+  const handleUpdateInquiry = async () => {
     if (!editInquiry) return;
 
-    axios.put(
-      `${API_BASE_URL}/api/inquiry/${editInquiry._id}`,
-      {
-        promptQuestion: editInquiry.promptQuestion,
-        promptResponse: editInquiry.promptResponse,
-        isEnabled: editInquiry.isEnabled,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+    try {
+      const res = await axios.put(
+        `${API_BASE_URL}/api/inquiry/${editInquiry._id}`,
+        {
+          promptQuestion: editInquiry.promptQuestion,
+          promptResponse: editInquiry.promptResponse,
+          isEnabled: editInquiry.isEnabled,
         },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data?.success) {
+        toast.success('Inquiry updated successfully');
+        setShowEditModal(false);
+        setEditInquiry(null);
+
+        await fetchInquiries(currentPage, searchQuery, perPage, statusFilter);
+      } else {
+        toast.error(res.data?.message || 'Failed to update inquiry');
       }
-    )
-      .then(res => {
-        if (res.data.success) {
-          toast.success('Inquiry updated successfully');
-          setShowEditModal(false);
-          setEditInquiry(null);
-          fetchInquiries();
-        } else {
-          toast.error(res.data.message || 'Failed to update inquiry');
-        }
-      })
-      .catch(err => {
-        console.error('Error updating inquiry:', err);
-        toast.error(err?.response?.data?.message || 'Error updating inquiry');
-      });
-  }
-
-  const getPaginationRange = (
-    current: number,
-    total: number,
-    siblingCount = 1
-  ) => {
-    const range: (number | string)[] = [];
-
-    const start = Math.max(2, current - siblingCount);
-    const end = Math.min(total - 1, current + siblingCount);
-
-    range.push(1);
-
-    if (start > 2) {
-      range.push('...');
+    } catch (err: any) {
+      console.error('Error updating inquiry:', err);
+      toast.error(err?.response?.data?.message || 'Error updating inquiry');
     }
-
-    for (let i = start; i <= end; i++) {
-      range.push(i);
-    }
-
-    if (end < total - 1) {
-      range.push('...');
-    }
-
-    if (total > 1) {
-      range.push(total);
-    }
-
-    return range;
   };
-
-  // Fetch when page or search changes
-  useEffect(() => {
-    fetchInquiries(currentPage, searchQuery);
-  }, [currentPage]);
 
   if (loading) {
     return (
@@ -303,7 +298,7 @@ const InquiryDashboard: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Inquiry Data</h3>
           <p className="text-gray-500 mb-4">{error}</p>
           <button
-            onClick={() => fetchInquiries(currentPage, searchQuery)}
+            onClick={() => fetchInquiries(currentPage, searchQuery, perPage, statusFilter)}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
           >
             Try Again
@@ -343,13 +338,10 @@ const InquiryDashboard: React.FC = () => {
           <Upload className="h-5 w-5" />
           Import File
         </button>
+
         <button
           onClick={() => {
-            setNewInquiry({
-              promptQuestion: '',
-              promptResponse: '',
-              isEnabled: true,
-            });
+            setNewInquiry({ promptQuestion: '', promptResponse: '', isEnabled: true });
             setShowAddModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -358,7 +350,6 @@ const InquiryDashboard: React.FC = () => {
           Add New Inquiry
         </button>
       </div>
-
 
       <div className="mb-4 flex items-center justify-between">
         {/* Per Page (LEFT) */}
@@ -370,7 +361,7 @@ const InquiryDashboard: React.FC = () => {
               const value = Number(e.target.value);
               setPerPage(value);
               setCurrentPage(1);
-              fetchInquiries(1, searchQuery, value);
+              fetchInquiries(1, searchQuery, value, statusFilter);
             }}
             className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
@@ -380,6 +371,7 @@ const InquiryDashboard: React.FC = () => {
             <option value={50}>50</option>
           </select>
           <span className="text-sm text-gray-600">entries</span>
+
           <div className="flex items-center space-x-2">
             <label className="text-sm text-gray-600">Status</label>
             <select
@@ -410,7 +402,7 @@ const InquiryDashboard: React.FC = () => {
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 setCurrentPage(1);
-                fetchInquiries(1, searchQuery, perPage);
+                fetchInquiries(1, searchQuery, perPage, statusFilter);
               }
             }}
             className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -418,7 +410,7 @@ const InquiryDashboard: React.FC = () => {
           <button
             onClick={() => {
               setCurrentPage(1);
-              fetchInquiries(1, searchQuery, perPage);
+              fetchInquiries(1, searchQuery, perPage, statusFilter);
             }}
             className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
           >
@@ -450,6 +442,7 @@ const InquiryDashboard: React.FC = () => {
                 </th>
               </tr>
             </thead>
+
             <tbody className="bg-white divide-y divide-gray-200">
               {inquiries.map((inquiry, index) => (
                 <motion.tr
@@ -460,31 +453,31 @@ const InquiryDashboard: React.FC = () => {
                   className="hover:bg-gray-50"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{inquiry.promptQuestion}</div>
-                    </div>
+                    <div className="text-sm text-gray-500 truncate max-w-xs">{inquiry.promptQuestion}</div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-xs text-gray-400 truncate max-w-xs">
-                        {inquiry.promptResponse}
-                      </div>
-                    </div>
+                    <div className="text-xs text-gray-400 truncate max-w-xs">{inquiry.promptResponse}</div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${inquiry.isEnabled
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                      }`}>
+                    <span
+                      className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${
+                        inquiry.isEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
                       {inquiry.isEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(inquiry.createdAt).toLocaleDateString()}
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900"
+                      <button
+                        className="text-blue-600 hover:text-blue-900"
                         onClick={() => {
                           setEditInquiry({
                             _id: inquiry._id,
@@ -493,12 +486,16 @@ const InquiryDashboard: React.FC = () => {
                             isEnabled: inquiry.isEnabled,
                           });
                           setShowEditModal(true);
-                        }}>
+                        }}
+                      >
                         Edit
                       </button>
+
                       <button
-                        className={`text-red-600 hover:text-red-900 ${inquiry._id === currentUser?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        disabled={inquiry._id === currentUser?.id}
+                        className={`text-red-600 hover:text-red-900 ${
+                          inquiry._id === (currentUser as any)?.id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={inquiry._id === (currentUser as any)?.id}
                         onClick={() => {
                           setSelectedInquiryId(inquiry._id);
                           setShowDeleteModal(true);
@@ -512,6 +509,8 @@ const InquiryDashboard: React.FC = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination */}
           <div>
             <nav
               className="relative z-0 flex justify-end px-2 py-2 rounded-md shadow-sm -space-x-px"
@@ -519,20 +518,16 @@ const InquiryDashboard: React.FC = () => {
             >
               {/* Previous */}
               <button
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 ${currentPage === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-500 hover:bg-gray-50'
-                  }`}
+                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
               >
                 <span className="sr-only">Previous</span>
-                <svg
-                  className="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
@@ -540,47 +535,33 @@ const InquiryDashboard: React.FC = () => {
                   />
                 </svg>
               </button>
-              {getPaginationRange(currentPage, totalPages).map((page, index) => {
-                if (page === '...') {
-                  return (
-                    <span
-                      key={`ellipsis-${index}`}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-400 text-sm"
-                    >
-                      …
-                    </span>
-                  );
-                }
 
-                return (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page as number)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
+              {getPaginationRange(currentPage, totalPages).map(page => (
+                <button
+                  key={page}
+                  onClick={() => goToPage(page)}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                    currentPage === page
                       ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                       : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
               {/* Next */}
               <button
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 ${currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-500 hover:bg-gray-50'
-                  }`}
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
               >
                 <span className="sr-only">Next</span>
-                <svg
-                  className="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
@@ -592,22 +573,15 @@ const InquiryDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
       {/* Delete Modal */}
-      <Modal
-        open={showDeleteModal}
-        title="Delete Inquiry"
-        onClose={() => setShowDeleteModal(false)}
-        size='sm'
-      >
+      <Modal open={showDeleteModal} title="Delete Inquiry" onClose={() => setShowDeleteModal(false)} size="sm">
         <p className="text-sm text-gray-600 mb-4">
           Are you sure you want to delete this inquiry? This action cannot be undone.
         </p>
 
         <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setShowDeleteModal(false)}
-            className="px-4 py-2 bg-gray-200 rounded"
-          >
+          <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 bg-gray-200 rounded">
             Cancel
           </button>
           <button
@@ -624,43 +598,31 @@ const InquiryDashboard: React.FC = () => {
       </Modal>
 
       {/* Add Inquiry Modal */}
-      <Modal
-        open={showAddModal}
-        title="Add Inquiry"
-        onClose={() => setShowAddModal(false)}
-        size='md'
-      >
+      <Modal open={showAddModal} title="Add Inquiry" onClose={() => setShowAddModal(false)} size="md">
         <div className="space-y-4">
           <textarea
-            placeholder={`ex: How can I reset my password if I forgot my email?`}
+            placeholder="ex: How can I reset my password if I forgot my email?"
             className="w-full border px-3 py-2 rounded resize-none placeholder:text-sm text-sm"
             rows={5}
-            cols={20}
             value={newInquiry.promptQuestion}
-            onChange={e =>
-              setNewInquiry({ ...newInquiry, promptQuestion: e.target.value })
-            }
+            onChange={e => setNewInquiry({ ...newInquiry, promptQuestion: e.target.value })}
           />
+
           <textarea
             placeholder="ex: To reset your password, click on 'Forgot Password' at the login page and follow the instructions sent to your registered email."
             className="w-full border px-3 py-2 rounded resize-none placeholder:text-sm text-sm"
             rows={15}
-            cols={20}
             value={newInquiry.promptResponse}
-            onChange={e =>
-              setNewInquiry({ ...newInquiry, promptResponse: e.target.value })
-            }
+            onChange={e => setNewInquiry({ ...newInquiry, promptResponse: e.target.value })}
           />
-          {/* Status Toggle */}
+
           <div className="flex items-center gap-6 mt-2">
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="radio"
-                name="status"
+                name="status-add"
                 checked={newInquiry.isEnabled === true}
-                onChange={() =>
-                  setNewInquiry({ ...newInquiry, isEnabled: true })
-                }
+                onChange={() => setNewInquiry({ ...newInquiry, isEnabled: true })}
               />
               Enabled
             </label>
@@ -668,26 +630,19 @@ const InquiryDashboard: React.FC = () => {
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="radio"
-                name="status"
+                name="status-add"
                 checked={newInquiry.isEnabled === false}
-                onChange={() =>
-                  setNewInquiry({ ...newInquiry, isEnabled: false })
-                }
+                onChange={() => setNewInquiry({ ...newInquiry, isEnabled: false })}
               />
               Disabled
             </label>
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              onClick={() => setShowAddModal(false)}
-              className="px-4 py-2 bg-gray-200 rounded"
-            >
+            <button onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-200 rounded">
               Cancel
             </button>
-            <button
-              onClick={handleAddInquiry}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-            >
+            <button onClick={handleAddInquiry} className="px-4 py-2 bg-blue-600 text-white rounded">
               Add Inquiry
             </button>
           </div>
@@ -695,43 +650,32 @@ const InquiryDashboard: React.FC = () => {
       </Modal>
 
       {/* Edit Inquiry Modal */}
-      <Modal
-        open={showEditModal}
-        title="Edit Inquiry"
-        onClose={() => setShowEditModal(false)}
-      >
+      <Modal open={showEditModal} title="Edit Inquiry" onClose={() => setShowEditModal(false)}>
         {editInquiry && (
           <div className="space-y-4">
             <textarea
               placeholder="Edit Prompt Question..."
               className="w-full border px-3 py-2 rounded resize-none placeholder:text-sm text-sm"
               rows={5}
-              cols={20}
               value={editInquiry.promptQuestion}
-              onChange={e =>
-                setEditInquiry({ ...editInquiry, promptQuestion: e.target.value })
-              }
+              onChange={e => setEditInquiry({ ...editInquiry, promptQuestion: e.target.value })}
             />
+
             <textarea
               placeholder="Edit Prompt Response..."
               className="w-full border px-3 py-2 rounded resize-none placeholder:text-sm text-sm"
               rows={15}
-              cols={20}
               value={editInquiry.promptResponse}
-              onChange={e =>
-                setEditInquiry({ ...editInquiry, promptResponse: e.target.value })
-              }
+              onChange={e => setEditInquiry({ ...editInquiry, promptResponse: e.target.value })}
             />
-            {/* Status Toggle */}
+
             <div className="flex items-center gap-6 mt-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
-                  name="status"
+                  name="status-edit"
                   checked={editInquiry.isEnabled === true}
-                  onChange={() =>
-                    setEditInquiry({ ...editInquiry, isEnabled: true })
-                  }
+                  onChange={() => setEditInquiry({ ...editInquiry, isEnabled: true })}
                 />
                 Enabled
               </label>
@@ -739,32 +683,27 @@ const InquiryDashboard: React.FC = () => {
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
-                  name="status"
+                  name="status-edit"
                   checked={editInquiry.isEnabled === false}
-                  onChange={() =>
-                    setEditInquiry({ ...editInquiry, isEnabled: false })
-                  }
+                  onChange={() => setEditInquiry({ ...editInquiry, isEnabled: false })}
                 />
                 Disabled
               </label>
             </div>
+
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded"
-              >
+              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-200 rounded">
                 Cancel
               </button>
-              <button
-                onClick={handleUpdateInquiry}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
+              <button onClick={handleUpdateInquiry} className="px-4 py-2 bg-blue-600 text-white rounded">
                 Save Changes
               </button>
             </div>
           </div>
         )}
       </Modal>
+
+      {/* Select Count Modal */}
       <Modal
         open={showSelectCountModal}
         title="Select Number of Inquiries"
@@ -779,21 +718,25 @@ const InquiryDashboard: React.FC = () => {
               viewBox="0 0 20 20"
               fill="currentColor"
             >
-              <path fillRule="evenodd" d="M18 10c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8zm-9 3a1 1 0 102 0v-2a1 1 0 10-2 0v2zm1-8a1 1 0 00-.993.883L9 6v4a1 1 0 001.993.117L11 10V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M18 10c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8zm-9 3a1 1 0 102 0v-2a1 1 0 10-2 0v2zm1-8a1 1 0 00-.993.883L9 6v4a1 1 0 001.993.117L11 10V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
             </svg>
             <p className="text-yellow-700 text-sm">
-              Q&A format files are <strong>ignored for this settings</strong>.
+              Q&amp;A format files are <strong>ignored for this settings</strong>.
             </p>
           </div>
-          <p className="text-gray-700 text-sm text-center">
-            Choose how many inquiries to create from this file:
-          </p>
+
+          <p className="text-gray-700 text-sm text-center">Choose how many inquiries to create from this file:</p>
+
           <input
             type="range"
             min={1}
             max={100}
             value={selectedInquiryCount}
-            onChange={(e) => setSelectedInquiryCount(Number(e.target.value))}
+            onChange={e => setSelectedInquiryCount(Number(e.target.value))}
             className="w-full"
           />
           <p className="text-gray-700 font-semibold">{selectedInquiryCount} inquiries</p>
@@ -818,59 +761,26 @@ const InquiryDashboard: React.FC = () => {
           </div>
         </div>
       </Modal>
-      <Modal
-        open={showProcessingModal}
-        title="Processing File"
-        onClose={() => { }}
-        size="sm"
-      >
+
+      {/* Processing Modal */}
+      <Modal open={showProcessingModal} title="Processing File" onClose={() => {}} size="sm">
         <div className="flex flex-col items-center justify-center py-8">
           {isProcessingSuccess ? (
             hasCreatedInquiries ? (
-              // ✅ Success (Check)
-              <svg
-                className="h-12 w-12 text-green-500 mb-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
+              <svg className="h-12 w-12 text-green-500 mb-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             ) : (
-              // ❌ No results (X mark)
-              <svg
-                className="h-12 w-12 text-red-500 mb-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+              <svg className="h-12 w-12 text-red-500 mb-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             )
           ) : (
-            // ⏳ Spinner
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
           )}
           <p className="text-center text-gray-700">{processingText}</p>
         </div>
       </Modal>
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
     </div>
   );
 };

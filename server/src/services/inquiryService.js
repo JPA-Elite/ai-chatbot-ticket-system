@@ -1,4 +1,6 @@
-import textract from 'textract';
+import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
 import { createEmbedding, preprocessText, generateInquiriesAI } from '../services/aiService.js';
 import { MAX_CHARS } from '../constants/constants.js';
 import { escapeRegex } from '../utils/utils.js';
@@ -156,6 +158,64 @@ export const deleteInquiryData = async (id) => {
   };
 };
 
+const extractTextFromFile = async (file) => {
+  const mime = file.mimetype;
+
+  // ✅ PDF
+  if (mime === 'application/pdf') {
+    const parser = new PDFParse({ data: file.buffer });
+    try {
+      const result = await parser.getText();
+      return result?.text || '';
+    } finally {
+      await parser.destroy();
+    }
+  }
+
+  // ✅ TXT / CSV
+  if (mime === 'text/plain' || mime === 'text/csv') {
+    return file.buffer?.toString('utf8') || '';
+  }
+
+  // ✅ DOCX (Word modern)
+  if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    const result = await mammoth.extractRawText({ buffer: file.buffer });
+    return result?.value || '';
+  }
+
+  // ⚠️ DOC (Word old) - not reliable in pure JS
+  if (mime === 'application/msword') {
+    throw new Error('DOC format is not supported. Please upload DOCX instead.');
+  }
+
+  // ✅ XLS / XLSX
+  if (
+    mime === 'application/vnd.ms-excel' ||
+    mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ) {
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+
+    let extractedText = '';
+
+    workbook.SheetNames.forEach((sheetName) => {
+      const sheet = workbook.Sheets[sheetName];
+
+      // Convert sheet into JSON rows
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      extractedText += `\n--- Sheet: ${sheetName} ---\n`;
+
+      for (const row of rows) {
+        extractedText += row.join(' ') + '\n';
+      }
+    });
+
+    return extractedText.trim();
+  }
+
+  throw new Error(`Unsupported file type: ${mime}`);
+};
+
 export const importInquiryFileData = async (file, count) => {
   if (!file) {
     return { status: 400, payload: { success: false, message: NO_FILE_UPLOADED_MESSAGE } };
@@ -163,23 +223,42 @@ export const importInquiryFileData = async (file, count) => {
 
   const allowedTypes = [
     'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    // DOC / DOCX
     'application/msword',
-    'text/plain'
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    // TXT
+    'text/plain',
+    // CSV
+    'text/csv',
+    // XLS / XLSX
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   ];
 
   if (!allowedTypes.includes(file.mimetype)) {
     return { status: 400, payload: { success: false, message: UNSUPPORTED_FILE_TYPE_MESSAGE } };
   }
 
-  const text = await new Promise((resolve, reject) => {
-    textract.fromBufferWithMime(file.mimetype, file.buffer, (error, extracted) => {
-      if (error) return reject(error);
-      resolve(extracted || '');
-    });
-  });
+  let text = '';
+  try {
+    text = await extractTextFromFile(file);
+  } catch (error) {
+    console.error('Text extraction error:', error);
+    return {
+      status: 400,
+      payload: { success: false, message: 'Failed to extract text from file. Please try another file.' }
+    };
+  }
 
   const normalizedText = String(text || '').trim();
+
+  if (!normalizedText) {
+    return {
+      status: 400,
+      payload: { success: false, message: 'File has no readable text content.' }
+    };
+  }
+
   if (normalizedText.length > MAX_CHARS) {
     return {
       status: 400,
@@ -192,13 +271,13 @@ export const importInquiryFileData = async (file, count) => {
 
     for (const inquiry of inquiries) {
       const existing = await findInquiryByPromptQuestion(inquiry.question);
-      if (existing) {
-        continue;
-      }
+      if (existing) continue;
+
       const embedding = await createEmbedding(preprocessText(inquiry.question, true));
       await createInquiry({
         promptQuestion: inquiry.question,
         promptResponse: inquiry.answer,
+        isEnabled: true,
         embedding
       });
     }
@@ -214,8 +293,10 @@ export const importInquiryFileData = async (file, count) => {
       }
     };
   } catch (error) {
+    console.error(error);
+
     let message = FILE_IMPORT_SERVER_ERROR_MESSAGE;
-    if (error.message.includes('E11000')) {
+    if (String(error?.message || '').includes('E11000')) {
       message = FILE_IMPORT_DUPLICATE_MESSAGE;
     }
 
