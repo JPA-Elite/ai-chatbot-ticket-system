@@ -143,6 +143,38 @@ export const FEEDBACK_NEGATIVE_RESPONSES = [
 export const FEEDBACK_POSITIVE_OPTIONS_TEXT = asBulletList(FEEDBACK_POSITIVE_RESPONSES);
 export const FEEDBACK_NEGATIVE_OPTIONS_TEXT = asBulletList(FEEDBACK_NEGATIVE_RESPONSES);
 
+export const ACKNOWLEDGEMENT_KEYWORDS = [
+  "yes",
+  "yes of course",
+  "of course",
+  "sure",
+  "sure thing",
+  "okay",
+  "ok",
+  "alright",
+  "got it",
+  "i got it",
+  "noted",
+  "understood",
+  "sounds good",
+  "that works"
+];
+
+export const ACKNOWLEDGEMENT_RESPONSES = [
+  "Okay, thank you for confirming.",
+  "Got it, thank you!",
+  "Alright, thanks for confirming.",
+  "Noted—thank you.",
+  "Sounds good, thank you!",
+  "Understood, thank you for the update.",
+  "Perfect, thanks for letting me know.",
+  "Great, thank you for confirming.",
+  "Alright, I appreciate the confirmation.",
+  "Okay, thanks! Let me know if you need anything else."
+];
+
+export const ACKNOWLEDGEMENT_RESPONSE_OPTIONS_TEXT = asBulletList(ACKNOWLEDGEMENT_RESPONSES);
+
 export const FILLER_PHRASES = [
     "may i know",
     "can you",
@@ -276,6 +308,7 @@ export const THANK_YOU_ONLY_MSG = "Thank-you message";
 export const CLOSE_ONLY_MSG = "Close message";
 export const FEEDBACK_POSITIVE_MSG = "Positive feedback message";
 export const FEEDBACK_NEGATIVE_MSG = "Negative feedback message";
+export const ACKNOWLEDGEMENT_MSG = "Acknowledgement message";
 export const ESCALATION_NEEDED_RESPONSE = "Conversation requires escalation to human agent.";
 export const RESPOND_TO_ESCALATION_MSG = "I can't fully assist with your request. Try asking a different question or contacting support by filing a ticket to our staff."
 
@@ -369,6 +402,7 @@ Return format (strict):
 - If latest message is gratitude+closing-only, return EXACTLY ONE response from THANK_YOU_CLOSING_RESPONSES below.
 - If latest message is positive correctness feedback (e.g., "you are correct"), return EXACTLY ONE response from FEEDBACK_POSITIVE_RESPONSES below.
 - If latest message is negative correctness feedback (e.g., "you are wrong", "nahh you're wrong"), return EXACTLY ONE response from FEEDBACK_NEGATIVE_RESPONSES below.
+- If latest message is acknowledgement-only (e.g., "yes of course", "okay", "got it"), return EXACTLY ONE response from ACKNOWLEDGEMENT_RESPONSES below.
 - For all other non-escalation cases, return EXACTLY the RESPOND_TO_ESCALATION_MSG constant.
 
 Allowed GREETING_RESPONSES:
@@ -388,6 +422,9 @@ ${FEEDBACK_POSITIVE_OPTIONS_TEXT}
 
 Allowed FEEDBACK_NEGATIVE_RESPONSES:
 ${FEEDBACK_NEGATIVE_OPTIONS_TEXT}
+
+Allowed ACKNOWLEDGEMENT_RESPONSES:
+${ACKNOWLEDGEMENT_RESPONSE_OPTIONS_TEXT}
 
 Routing/escalation is REQUIRED if the user:
 - asks for a real person, human agent, live support, or support staff
@@ -417,6 +454,7 @@ For non-escalation:
 - gratitude+closing-only => return exactly one response from THANK_YOU_CLOSING_RESPONSES
 - positive correctness feedback => return exactly one response from FEEDBACK_POSITIVE_RESPONSES
 - negative correctness feedback => return exactly one response from FEEDBACK_NEGATIVE_RESPONSES
+- acknowledgement-only => return exactly one response from ACKNOWLEDGEMENT_RESPONSES
 - otherwise return EXACTLY: "${RESPOND_TO_ESCALATION_MSG}"`;
 
 export const ESCALATION_ROUTER_USER_PROMPT_TEMPLATE = (conversationText) => `You are a support assistant AI. Analyze the following conversation and determine if it should be escalated to a human agent.

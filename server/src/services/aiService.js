@@ -11,6 +11,8 @@ import {
   POLITE_NEUTRAL_KEYWORDS,
   FEEDBACK_POSITIVE_KEYWORDS,
   FEEDBACK_NEGATIVE_KEYWORDS,
+  ACKNOWLEDGEMENT_KEYWORDS,
+  ACKNOWLEDGEMENT_RESPONSES,
   ESCALATION_NEEDED_MSG,
   ESCALATION_NEEDED_RESPONSE,
   RESPOND_TO_ESCALATION_MSG,
@@ -18,7 +20,8 @@ import {
   THANK_YOU_ONLY_MSG,
   CLOSE_ONLY_MSG,
   FEEDBACK_POSITIVE_MSG,
-  FEEDBACK_NEGATIVE_MSG
+  FEEDBACK_NEGATIVE_MSG,
+  ACKNOWLEDGEMENT_MSG
 } from "../constants/constants.js";
 import {
   createInquiryRelevance,
@@ -68,16 +71,18 @@ function detectPoliteOnlyMessageType(message = "") {
     ...GREETING_KEYWORDS.map((phrase) => [phrase, "greeting"]),
     ...THANK_YOU_KEYWORDS.map((phrase) => [phrase, "thank"]),
     ...THANK_YOU_CLOSING_KEYWORDS.map((phrase) => [phrase, "closing"]),
+    ...ACKNOWLEDGEMENT_KEYWORDS.map((phrase) => [phrase, "ack"]),
     ...POLITE_NEUTRAL_KEYWORDS.map((phrase) => [phrase, "neutral"])
   ]);
 
-  function walk(remainingWords, hasGreeting = false, hasThank = false, hasClosing = false) {
+  function walk(remainingWords, hasGreeting = false, hasThank = false, hasClosing = false, hasAck = false) {
     if (remainingWords.length === 0) {
       if (hasThank) {
         return hasClosing ? "thank_closing" : "thank";
       }
 
       if (hasGreeting) return "greeting";
+      if (hasAck) return "acknowledgement";
       return null;
     }
 
@@ -90,7 +95,8 @@ function detectPoliteOnlyMessageType(message = "") {
         remainingWords.slice(i),
         hasGreeting || type === "greeting",
         hasThank || type === "thank",
-        hasClosing || type === "closing"
+        hasClosing || type === "closing",
+        hasAck || type === "ack"
       );
 
       if (next) return next;
@@ -206,7 +212,9 @@ export async function analyzeConversation(chatHistory, latestMessage = "", isRes
           ? GREETING_ONLY_MSG
           : politeType === "thank_closing"
             ? CLOSE_ONLY_MSG
-            : THANK_YOU_ONLY_MSG;
+            : politeType === "acknowledgement"
+              ? ACKNOWLEDGEMENT_MSG
+              : THANK_YOU_ONLY_MSG;
         const responseTime = Date.now() - startResponseTime;
         await createInquiryRelevance({
           userInquiry: latestMessage,
@@ -371,6 +379,12 @@ export function getRuleBasedResponse(message) {
     const responses = politeType === "thank_closing" ? THANK_YOU_CLOSING_RESPONSES : THANK_YOU_RESPONSES;
     return responses[
       Math.floor(Math.random() * responses.length)
+    ];
+  }
+
+  if (politeType === "acknowledgement") {
+    return ACKNOWLEDGEMENT_RESPONSES[
+      Math.floor(Math.random() * ACKNOWLEDGEMENT_RESPONSES.length)
     ];
   }
 
