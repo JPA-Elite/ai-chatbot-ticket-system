@@ -165,7 +165,7 @@ When you get an OpenAI API key:
 │   ├── pages/           # Page components
 │   └── main.tsx         # Entry point
 │
-└── package.json
+└── package.json 
 ```
 
 ## License
